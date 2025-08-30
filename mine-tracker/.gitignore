@@ -135,7 +135,8 @@ target/
 
 # pyenv
 .python-version
-
+env/
+models/
 # celery beat schedule file
 celerybeat-schedule
 

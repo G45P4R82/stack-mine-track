@@ -9,3 +9,7 @@ minecraft_servidores_features:
   filepath: data/04_feature/minecraft_servidores_features.csv
   save_args:
     index: false
+
+mlflow_tracking_uri:
+  type: text.TextDataset           # <- era kedro.extras.datasets.text.TextDataSet
+  filepath: conf/local/mlflow_tracking_uri.txt

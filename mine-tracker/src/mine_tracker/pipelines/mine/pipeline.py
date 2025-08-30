@@ -1,5 +1,5 @@
 from kedro.pipeline import Pipeline, node, pipeline
-from .nodes import carregar_dados, gerar_features
+from mine_tracker.pipelines.mine.nodes import carregar_dados, gerar_features  # noqa
 
 def create_pipeline(**kwargs) -> Pipeline:
     return pipeline([

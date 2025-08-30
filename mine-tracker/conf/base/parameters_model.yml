@@ -1,0 +1,15 @@
+# conf/base/parameters_model.yml
+model:
+  features:
+    - hora
+    - final_de_semana
+    - media_movel_10
+    - proporcao_rede
+    - pct_var_jogadores
+  target: playerCount
+  test_size: 0.2
+  random_state: 42
+  winsorize_feature: pct_var_jogadores
+  winsorize_p_low: 1
+  winsorize_p_high: 99
+  models_dir: "models"
