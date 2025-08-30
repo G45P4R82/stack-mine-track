@@ -15,6 +15,7 @@ publish:
 login:
 	docker login
 
+
 help:
 	@echo "Makefile commands:"
 	@echo "  build  - Build the Docker image"
