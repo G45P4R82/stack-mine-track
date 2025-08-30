@@ -1,0 +1,11 @@
+minecraft_servidores_raw:
+  type: pandas.CSVDataset
+  filepath: data/01_raw/minecraft_servidores_raw.csv
+  save_args:
+    index: false
+
+minecraft_servidores_features:
+  type: pandas.CSVDataset
+  filepath: data/04_feature/minecraft_servidores_features.csv
+  save_args:
+    index: false
