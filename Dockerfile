@@ -2,17 +2,24 @@ FROM python:3.12-slim
 
 WORKDIR /app
 
-# Instale dependências do sistema primeiro
+# Instala dependências do sistema
 RUN apt-get update && \
     apt-get install -y --no-install-recommends curl && \
     rm -rf /var/lib/apt/lists/*
 
+# Instala dependências Python
 COPY mine-tracker/requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
+# Copia código completo
 COPY . .
 
+# Define o diretório de trabalho no projeto Kedro
+WORKDIR /app/mine-tracker
+
+# Expõe porta para kedro-viz
 EXPOSE 8000
 
-# Use shell para mudar de diretório e rodar o Kedro
-CMD cd mine-tracker && kedro run
+# Define entrypoint padrão, permitindo passar comandos no `docker run`
+ENTRYPOINT ["kedro"]
+CMD ["run"]

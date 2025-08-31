@@ -13,3 +13,38 @@ minecraft_servidores_features:
 mlflow_tracking_uri:
   type: text.TextDataset           # <- era kedro.extras.datasets.text.TextDataSet
   filepath: conf/local/mlflow_tracking_uri.txt
+
+best_model:
+  type: pickle.PickleDataset
+  filepath: data/06_models/best_model.pkl
+  backend: joblib
+  versioned: false
+
+
+metricas_dict:
+  type: json.JSONDataset
+  filepath: data/08_reporting/metricas.json
+
+input_inference:
+  type: pandas.CSVDataset
+  filepath: data/02_intermediate/base_ultimos_4h.csv
+  load_args:
+    dtype:
+      hora: int64
+      final_de_semana: int64
+      media_movel_10: float64
+      proporcao_rede: float64
+      pct_var_jogadores: float64
+      cluster: int64   # id do cluster, se já tiver no CSV
+
+
+output_inference:
+  type: pandas.CSVDataset
+  filepath: data/02_intermediate/base_ultimos_4h_inference.csv
+
+report_inference:
+  type: json.JSONDataset
+  filepath: data/08_reporting/report_inference.json
+  save_args:
+    indent: 2
+    ensure_ascii: false

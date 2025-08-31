@@ -1,5 +1,5 @@
 """
-This is a boilerplate test file for pipeline 'deploy'
+This is a boilerplate test file for pipeline 'inference'
 generated using Kedro 1.0.0.
 Please add your pipeline tests here.
 

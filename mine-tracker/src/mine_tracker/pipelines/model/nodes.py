@@ -192,31 +192,4 @@ def avaliar_modelos(
 
     # Escolhe melhor por R²
     melhor = max(metricas, key=lambda k: metricas[k][1])
-
-    # Salva
-    os.makedirs(MODEL_DIR, exist_ok=True)
-    ts = datetime.now().strftime("%Y%m%d_%H%M%S")
-    path_model = os.path.join(MODEL_DIR, f"{melhor}_{ts}.joblib")
-    joblib.dump(modelos[melhor], path_model)
-
-    servidor_escolhido = X.attrs.get("servidor_escolhido", "<desconhecido>")
-    path_log = os.path.join(MODEL_DIR, f"report_{ts}.txt")
-    with open(path_log, "w", encoding="utf-8") as f:
-        f.write("TREINO REGRESSÃO – Previsão de jogadores por horário\n")
-        f.write(f"Servidor: {servidor_escolhido}\n")
-        f.write(f"Linhas removidas por y NaN: {n_drop_y}\n")
-        f.write("\nMétricas (teste):\n")
-        for k, (mae, r2) in metricas.items():
-            f.write(f"{k}: MAE={mae:.2f} | R2={r2:.4f}\n")
-        f.write(f"\nMelhor modelo: {melhor}\nSalvo em: {path_model}\n")
-
-    logger.info(f"\nMelhor modelo: {melhor}")
-    logger.info(f"Modelo salvo em: {path_model}")
-    logger.info(f"Relatório salvo em: {path_log}")
-
-    # Exemplos de previsão (5 primeiros do teste)
-    logger.info("\nExemplos de previsão (primeiros 5 do teste):")
-    n = min(5, len(X_test))
-    pred = modelos[melhor].predict(X_test.iloc[:n])
-    for i, (real, prev) in enumerate(zip(y_test.iloc[:n].values, pred), start=1):
-        logger.info(f"{i:02d}) Real={real:.0f} | Previsto={prev:.0f}")
+    return modelos[melhor], {k: {"mae": m[0], "r2": m[1]} for k, m in metricas.items()}, X_test

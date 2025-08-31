@@ -1,5 +1,0 @@
-
-deploy:
-  mlflow_experiment: "minecraft-training"
-  mlflow_model_name: "minecraft-player-predictor"
-  latest_model_path: "models/LinearRegression_20250830_100736.joblib"

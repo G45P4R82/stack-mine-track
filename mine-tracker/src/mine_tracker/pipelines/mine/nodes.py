@@ -5,14 +5,56 @@ generated using Kedro 1.0.0
 import pandas as pd
 import logging
 logger = logging.getLogger(__name__)
+import pandas as pd
+import random
+from datetime import datetime
+import pytz
 
 
 def carregar_dados():
     """Carrega o CSV e converte timestamp corretamente."""
-    caminho_csv = "https://dl.minetrack.me/Java/1-8-2021.csv"
+    caminho_csv = "https://dl.minetrack.me/Java/1-8-2022.csv"
     df = pd.read_csv(caminho_csv)
     df['timestamp'] = pd.to_datetime(df['timestamp'], errors='coerce')
     return df
+
+
+def carregar_dados_ultimas_4h() -> pd.DataFrame:
+    """
+    Simula a coleta de dados coerente com clusters conhecidos,
+    usando horário do Brasil e variação de ±1h.
+    """
+    tz = pytz.timezone("America/Sao_Paulo")
+    now = datetime.now(tz)
+
+    # clusters e horários base
+    clusters_config = {
+        0: {"hora_base": 10, "media_range": (58000, 62000)},
+        1: {"hora_base": 18, "media_range": (68000, 72000)},
+        2: {"hora_base": 21, "media_range": (87000, 91000)},
+        3: {"hora_base": 3,  "media_range": (38000, 42000)},
+    }
+
+    rows = []
+    for cluster_id, cfg in clusters_config.items():
+        hora = cfg["hora_base"] + random.choice([-1, 0, 1])
+        hora = max(0, min(23, hora))  # garante 0–23
+        final_de_semana = 1 if now.weekday() >= 5 else 0
+
+        media_movel_10 = random.randint(*cfg["media_range"])
+        proporcao_rede = round(random.uniform(0.25, 0.40), 2)
+        pct_var_jogadores = round(random.uniform(-1.0, 2.0), 1)
+
+        rows.append({
+            "hora": hora,
+            "final_de_semana": final_de_semana,
+            "media_movel_10": media_movel_10,
+            "proporcao_rede": proporcao_rede,
+            "pct_var_jogadores": pct_var_jogadores,
+            "cluster": cluster_id
+        })
+
+    return pd.DataFrame(rows)
 
 
 def gerar_features(df):

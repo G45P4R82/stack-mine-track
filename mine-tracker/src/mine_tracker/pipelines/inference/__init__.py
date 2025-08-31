@@ -1,5 +1,5 @@
 """
-This is a boilerplate pipeline 'deploy'
+This is a boilerplate pipeline 'inference'
 generated using Kedro 1.0.0
 """
 

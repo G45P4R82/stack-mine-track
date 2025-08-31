@@ -32,7 +32,7 @@ def create_pipeline(**kwargs) -> Pipeline:
         Node(  # <- AVALIA USA "modelos_trained"
             func=avaliar_modelos,
             inputs=["modelos_trained", "X", "y", "n_drop_y"],
-            outputs=None,
+            outputs=["best_model", "metricas_dict", "X_test"],
             name="avaliar_modelos_node",
         ),
     ])
