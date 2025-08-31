@@ -9,14 +9,31 @@ import pandas as pd
 import random
 from datetime import datetime
 import pytz
+from datetime import datetime, timedelta
 
 
 def carregar_dados():
-    """Carrega o CSV e converte timestamp corretamente."""
-    caminho_csv = "https://dl.minetrack.me/Java/1-8-2022.csv"
-    df = pd.read_csv(caminho_csv)
-    df['timestamp'] = pd.to_datetime(df['timestamp'], errors='coerce')
-    return df
+    """Carrega os CSVs de 02/04/2020 até 30/07/2020 (Java edition) e concatena."""
+    inicio = datetime(2022, 4, 2)
+    fim = datetime(2022, 4, 10)
+    dados = []
+
+    dia = inicio
+    while dia <= fim:
+        url = f"https://dl.minetrack.me/Java/{dia.day}-{dia.month}-{dia.year}.csv"
+        try:
+            df = pd.read_csv(url)
+            df['timestamp'] = pd.to_datetime(df['timestamp'], unit='ms', errors='coerce', utc=True)
+            dados.append(df)
+            print(f"✅ carregado {url}")
+        except Exception as e:
+            print(f"⚠️ erro em {url}: {e}")
+        dia += timedelta(days=1)
+
+    if dados:
+        return pd.concat(dados, ignore_index=True)
+    else:
+        return pd.DataFrame()
 
 
 def carregar_dados_ultimas_4h() -> pd.DataFrame:
