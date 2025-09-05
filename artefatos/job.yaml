@@ -1,47 +1,59 @@
 ---
-- name: Run Kedro pipelines one by one
+- name: Rodar pipelines do Kedro
   hosts: all
-  gather_facts: false
-
   vars:
-    project_dir: /home/serverlab/stack-mine-tracker/mine-tracker
-    venv_python: /home/serverlab/stack-mine-tracker/env/bin/python
+    ansible_become: true
+    ansible_become_method: sudo
+    ansible_become_password: verderoot
+    project_dir: /home/serverlab/stack-mine-track/mine-tracker
+    venv_python: /home/serverlab/stack-mine-track/env/bin/python
     log_file: "{{ project_dir }}/info.log"
 
   tasks:
-    - name: Check Kedro is available in the virtualenv
-      ansible.builtin.command: "{{ venv_python }} -m kedro --version"
+    - name: Verificar usuário atual
+      shell: whoami
+      become: true
+      register: whoami_result
+
+    - name: Exibir usuário
+      debug:
+        msg: "O comando está sendo executado como: {{ whoami_result.stdout }}"
+      become: true
+
+    - name: Verificar versão do Kedro no venv
+      command: "{{ venv_python }} -m kedro --version"
       args:
         chdir: "{{ project_dir }}"
       register: kedro_version
       changed_when: false
 
-    - name: Run Kedro pipeline mine
-      ansible.builtin.shell: |
+    - name: Exibir versão do Kedro
+      debug:
+        msg: "Kedro versão: {{ kedro_version.stdout }}"
+
+    - name: Rodar pipeline mine
+      shell: |
         set -euo pipefail
-        echo "==== $(date -Is) Running pipeline: mine ====" | tee -a "{{ log_file }}"
+        echo "==== $(date -Is) Pipeline: mine ====" | tee -a "{{ log_file }}"
         "{{ venv_python }}" -m kedro run --pipeline mine 2>&1 | tee -a "{{ log_file }}"
-        echo "==== $(date -Is) Finished pipeline: mine ====" | tee -a "{{ log_file }}"
       args:
         chdir: "{{ project_dir }}"
         executable: /bin/bash
 
-    - name: Run Kedro pipeline model
-      ansible.builtin.shell: |
+    - name: Rodar pipeline model
+      shell: |
         set -euo pipefail
-        echo "==== $(date -Is) Running pipeline: model ====" | tee -a "{{ log_file }}"
+        echo "==== $(date -Is) Pipeline: model ====" | tee -a "{{ log_file }}"
         "{{ venv_python }}" -m kedro run --pipeline model 2>&1 | tee -a "{{ log_file }}"
-        echo "==== $(date -Is) Finished pipeline: model ====" | tee -a "{{ log_file }}"
       args:
         chdir: "{{ project_dir }}"
         executable: /bin/bash
 
-    - name: Run Kedro pipeline inference
-      ansible.builtin.shell: |
+    - name: Rodar pipeline inference
+      shell: |
         set -euo pipefail
-        echo "==== $(date -Is) Running pipeline: inference ====" | tee -a "{{ log_file }}"
+        echo "==== $(date -Is) Pipeline: inference ====" | tee -a "{{ log_file }}"
         "{{ venv_python }}" -m kedro run --pipeline inference 2>&1 | tee -a "{{ log_file }}"
-        echo "==== $(date -Is) Finished pipeline: inference ====" | tee -a "{{ log_file }}"
       args:
         chdir: "{{ project_dir }}"
         executable: /bin/bash
