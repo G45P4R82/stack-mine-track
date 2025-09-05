@@ -1,5 +1,5 @@
 ---
-- name: Rodar pipelines do Kedro (fix Jinja templating)
+- name: Rodar pipelines do Kedro (logs completos por etapa)
   hosts: all
   gather_facts: false
   vars:
@@ -86,7 +86,7 @@
         msg: "venv_python => {{ venv_python }}"
       become: false
 
-    # Definir o log_file JÁ RESOLVIDO (sem bash substitution)
+    # Definir o log_file
     - name: Definir caminho do log
       ansible.builtin.set_fact:
         log_file: "{{ project_dir }}/info.log"
@@ -107,12 +107,17 @@
         msg: "Kedro versão: {{ kedro_version.stdout | default('(sem saída)') }}"
       become: false
 
+    # =========================
+    # PIPELINE: MINE
+    # =========================
     - name: Rodar pipeline mine
       ansible.builtin.shell: |
         set -euo pipefail
-        echo "==== $(date -Is) Pipeline: mine ====" | tee -a "{{ log_file }}"
-        "{{ venv_python }}" -m kedro run --pipeline mine 2>&1 | tee -a "{{ log_file }}"
-        echo "==== $(date -Is) Fim: mine ====" | tee -a "{{ log_file }}"
+        {
+          echo "==== $(date -Is) Pipeline: mine ===="
+          "{{ venv_python }}" -m kedro run --pipeline mine 2>&1
+          echo "==== $(date -Is) Fim: mine ===="
+        } | tee -a "{{ log_file }}"
       args:
         chdir: "{{ project_dir }}"
         executable: /bin/bash
@@ -120,13 +125,25 @@
         KEDRO_DISABLE_TELEMETRY: "1"
         PATH: "{{ (venv_python | dirname) | dirname }}/bin:{{ ansible_env.PATH | default('/usr/bin:/bin') }}"
       become: false
+      register: mine_log
+      changed_when: false
 
+    - name: Mostrar log completo da etapa mine
+      ansible.builtin.debug:
+        msg: "{{ mine_log.stdout }}"
+      become: false
+
+    # =========================
+    # PIPELINE: MODEL
+    # =========================
     - name: Rodar pipeline model
       ansible.builtin.shell: |
         set -euo pipefail
-        echo "==== $(date -Is) Pipeline: model ====" | tee -a "{{ log_file }}"
-        "{{ venv_python }}" -m kedro run --pipeline model 2>&1 | tee -a "{{ log_file }}"
-        echo "==== $(date -Is) Fim: model ====" | tee -a "{{ log_file }}"
+        {
+          echo "==== $(date -Is) Pipeline: model ===="
+          "{{ venv_python }}" -m kedro run --pipeline model 2>&1
+          echo "==== $(date -Is) Fim: model ===="
+        } | tee -a "{{ log_file }}"
       args:
         chdir: "{{ project_dir }}"
         executable: /bin/bash
@@ -134,17 +151,36 @@
         KEDRO_DISABLE_TELEMETRY: "1"
         PATH: "{{ (venv_python | dirname) | dirname }}/bin:{{ ansible_env.PATH | default('/usr/bin:/bin') }}"
       become: false
+      register: model_log
+      changed_when: false
 
+    - name: Mostrar log completo da etapa model
+      ansible.builtin.debug:
+        msg: "{{ model_log.stdout }}"
+      become: false
+
+    # =========================
+    # PIPELINE: INFERENCE
+    # =========================
     - name: Rodar pipeline inference
       ansible.builtin.shell: |
         set -euo pipefail
-        echo "==== $(date -Is) Pipeline: inference ====" | tee -a "{{ log_file }}"
-        "{{ venv_python }}" -m kedro run --pipeline inference 2>&1 | tee -a "{{ log_file }}"
-        echo "==== $(date -Is) Fim: inference ====" | tee -a "{{ log_file }}"
+        {
+          echo "==== $(date -Is) Pipeline: inference ===="
+          "{{ venv_python }}" -m kedro run --pipeline inference 2>&1
+          echo "==== $(date -Is) Fim: inference ===="
+        } | tee -a "{{ log_file }}"
       args:
         chdir: "{{ project_dir }}"
         executable: /bin/bash
       environment:
         KEDRO_DISABLE_TELEMETRY: "1"
         PATH: "{{ (venv_python | dirname) | dirname }}/bin:{{ ansible_env.PATH | default('/usr/bin:/bin') }}"
+      become: false
+      register: inference_log
+      changed_when: false
+
+    - name: Mostrar log completo da etapa inference
+      ansible.builtin.debug:
+        msg: "{{ inference_log.stdout }}"
       become: false
