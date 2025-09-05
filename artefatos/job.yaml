@@ -1,0 +1,48 @@
+---
+- name: Run Kedro pipelines one by one
+  hosts: all
+  gather_facts: false
+
+  vars:
+    project_dir: /home/serverlab/stack-mine-tracker/mine-tracker
+    venv_python: /home/serverlab/stack-mine-tracker/env/bin/python
+    log_file: "{{ project_dir }}/info.log"
+
+  tasks:
+    - name: Check Kedro is available in the virtualenv
+      ansible.builtin.command: "{{ venv_python }} -m kedro --version"
+      args:
+        chdir: "{{ project_dir }}"
+      register: kedro_version
+      changed_when: false
+
+    - name: Run Kedro pipeline mine
+      ansible.builtin.shell: |
+        set -euo pipefail
+        echo "==== $(date -Is) Running pipeline: mine ====" | tee -a "{{ log_file }}"
+        "{{ venv_python }}" -m kedro run --pipeline mine 2>&1 | tee -a "{{ log_file }}"
+        echo "==== $(date -Is) Finished pipeline: mine ====" | tee -a "{{ log_file }}"
+      args:
+        chdir: "{{ project_dir }}"
+        executable: /bin/bash
+
+    - name: Run Kedro pipeline model
+      ansible.builtin.shell: |
+        set -euo pipefail
+        echo "==== $(date -Is) Running pipeline: model ====" | tee -a "{{ log_file }}"
+        "{{ venv_python }}" -m kedro run --pipeline model 2>&1 | tee -a "{{ log_file }}"
+        echo "==== $(date -Is) Finished pipeline: model ====" | tee -a "{{ log_file }}"
+      args:
+        chdir: "{{ project_dir }}"
+        executable: /bin/bash
+
+    - name: Run Kedro pipeline inference
+      ansible.builtin.shell: |
+        set -euo pipefail
+        echo "==== $(date -Is) Running pipeline: inference ====" | tee -a "{{ log_file }}"
+        "{{ venv_python }}" -m kedro run --pipeline inference 2>&1 | tee -a "{{ log_file }}"
+        echo "==== $(date -Is) Finished pipeline: inference ====" | tee -a "{{ log_file }}"
+      args:
+        chdir: "{{ project_dir }}"
+        executable: /bin/bash
+
