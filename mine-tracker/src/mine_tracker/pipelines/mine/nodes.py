@@ -36,10 +36,11 @@ def carregar_dados():
         return pd.DataFrame()
 
 
-def carregar_dados_ultimas_4h() -> pd.DataFrame:
+def carregar_dados_ultimas_4h(n_rows: int = 250) -> pd.DataFrame:
     """
     Simula a coleta de dados coerente com clusters conhecidos,
     usando horário do Brasil e variação de ±1h.
+    Gera múltiplas linhas por cluster para criar base de inferência.
     """
     tz = pytz.timezone("America/Sao_Paulo")
     now = datetime.now(tz)
@@ -53,7 +54,12 @@ def carregar_dados_ultimas_4h() -> pd.DataFrame:
     }
 
     rows = []
-    for cluster_id, cfg in clusters_config.items():
+    cluster_ids = list(clusters_config.keys())
+
+    for _ in range(n_rows):
+        cluster_id = random.choice(cluster_ids)
+        cfg = clusters_config[cluster_id]
+
         hora = cfg["hora_base"] + random.choice([-1, 0, 1])
         hora = max(0, min(23, hora))  # garante 0–23
         final_de_semana = 1 if now.weekday() >= 5 else 0
@@ -72,7 +78,6 @@ def carregar_dados_ultimas_4h() -> pd.DataFrame:
         })
 
     return pd.DataFrame(rows)
-
 
 def gerar_features(df):
     """Cria todas as features para análise."""

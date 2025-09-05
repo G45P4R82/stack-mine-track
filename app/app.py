@@ -1,31 +1,29 @@
-# -*- coding: utf-8 -*-
-# app.py que vai fazer load do modelo e fazer a predição usando flask framework
+from flask import Flask, render_template, jsonify
+import json
+import os
 
-import flask
-import mlflow
+app = Flask(__name__)
 
+# Carregar dados do JSON
+def load_data():
+    json_path = os.path.join(os.path.dirname(__file__), '..', 'mine-tracker', 'data', '08_reporting', 'report_inference.json')
+    with open(json_path, 'r', encoding='utf-8') as f:
+        return json.load(f)
 
-app = flask.Flask(__name__)
+@app.route('/')
+def dashboard():
+    data = load_data()
+    return render_template('dashboard.html', data=data)
 
-def load_model(params):
-    run_uri = "runs:/260ba19b0ca84646bee0b3fc4663099e/minecraft-model"
-    mlflow.set_tracking_uri(params.get("uri"))
-    mlflow.set_experiment(params.get("experiment_name"))
-    model = mlflow.sklearn.load_model(run_uri)
-    return model
+@app.route('/dashboard')
+def dashboard_alt():
+    data = load_data()
+    return render_template('dashboard.html', data=data)
 
-def predict(model, X_test):
-    y_pred = model.predict(X_test)
-    return y_pred
-
-
-@app.route('/predict', methods=['POST'])
-def predict():
-    params = flask.request.json
-    prediction = predict(model, params.get("X_test"))
-    return flask.jsonify({"prediction": prediction})  
+@app.route('/api/data')
+def api_data():
+    data = load_data()
+    return jsonify(data)
 
 if __name__ == '__main__':
-    params = {"uri": "http://192.168.0.43:3000", "experiment_name": "minecraft-training"}
-    model = load_model(params)
     app.run(host='0.0.0.0', port=8901, debug=True)

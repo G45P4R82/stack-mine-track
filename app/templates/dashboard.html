@@ -1,0 +1,1062 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - Mine Tracker{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card fade-in">
+                <div class="card-body">
+                    <h1 class="mb-0">
+                        <i class="fas fa-tachometer-alt mr-3"></i>
+                        Dashboard Completo - Mine Tracker
+                    </h1>
+                    <p class="text-muted mt-2">Sistema completo de monitoramento e análise de dados de mineração</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Operational Metrics -->
+    <div class="row mb-4">
+        <div class="col-lg-3 col-md-6 mb-3">
+            <div class="stat-card fade-in">
+                <div class="stat-number text-primary" id="total-clusters">-</div>
+                <div class="stat-label">Clusters Ativos</div>
+            </div>
+        </div>
+        <div class="col-lg-3 col-md-6 mb-3">
+            <div class="stat-card fade-in">
+                <div class="stat-number text-danger" id="high-level-clusters">-</div>
+                <div class="stat-label">Requer Atenção</div>
+            </div>
+        </div>
+        <div class="col-lg-3 col-md-6 mb-3">
+            <div class="stat-card fade-in">
+                <div class="stat-number text-success" id="medium-level-clusters">-</div>
+                <div class="stat-label">Estável</div>
+            </div>
+        </div>
+        <div class="col-lg-3 col-md-6 mb-3">
+            <div class="stat-card fade-in">
+                <div class="stat-number text-info" id="total-instances">-</div>
+                <div class="stat-label">Instâncias Monitoradas</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- AI Recommendations Alert -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card fade-in border-warning">
+                <div class="card-header bg-warning text-dark">
+                    <h5 class="mb-0">
+                        <i class="fas fa-robot mr-2"></i>
+                        Recomendações da IA para Operações
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row" id="ai-recommendations">
+                        <!-- Recomendações serão carregadas via JavaScript -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Charts Row 1 -->
+    <div class="row mb-4">
+        <div class="col-lg-6 mb-4">
+            <div class="card fade-in">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-chart-pie mr-2"></i>
+                        Distribuição por Nível de Cluster
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="chart-container">
+                        <canvas id="levelChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-6 mb-4">
+            <div class="card fade-in">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-chart-bar mr-2"></i>
+                        Previsões por Cluster
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="chart-container">
+                        <canvas id="predictionChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Charts Row 2 -->
+    <div class="row mb-4">
+        <div class="col-lg-6 mb-4">
+            <div class="card fade-in">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-clock mr-2"></i>
+                        Distribuição por Horário
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="chart-container">
+                        <canvas id="timeDistributionChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-6 mb-4">
+            <div class="card fade-in">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-chart-area mr-2"></i>
+                        Correlação: Hora vs Previsão
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="chart-container">
+                        <canvas id="correlationChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Charts Row 3 -->
+    <div class="row mb-4">
+        <div class="col-lg-8 mb-4">
+            <div class="card fade-in">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-chart-line mr-2"></i>
+                        Análise Temporal das Previsões
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="chart-container">
+                        <canvas id="timeSeriesChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-4 mb-4">
+            <div class="card fade-in">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-chart-doughnut mr-2"></i>
+                        Proporção de Rede
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="chart-container">
+                        <canvas id="networkProportionChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Operational Insights -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card fade-in">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-lightbulb mr-2"></i>
+                        Insights Operacionais - O que a IA sugere para seus servidores Minecraft
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row" id="operational-insights">
+                        <!-- Insights serão carregados via JavaScript -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Clusters Table -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card fade-in">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-server mr-2"></i>
+                        Status dos Servidores por Cluster
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Cluster ID</th>
+                                    <th>Jogadores Previstos</th>
+                                    <th>Status do Servidor</th>
+                                    <th>Ação Recomendada</th>
+                                    <th>Horário Pico</th>
+                                    <th>Capacidade Atual</th>
+                                    <th>Tendência</th>
+                                    <th>Prioridade</th>
+                                </tr>
+                            </thead>
+                            <tbody id="clusters-table">
+                                <!-- Dados serão carregados via JavaScript -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Ranking Section -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card fade-in">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-trophy mr-2"></i>
+                        Ranking de Performance
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row" id="ranking-cards">
+                        <!-- Cards de ranking serão gerados via JavaScript -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Detailed Instances Table -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card fade-in">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-list mr-2"></i>
+                        Dados Detalhados das Instâncias
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover" id="detailed-table">
+                            <thead>
+                                <tr>
+                                    <th>Cluster ID</th>
+                                    <th>Hora</th>
+                                    <th>Fim de Semana</th>
+                                    <th>Média Móvel</th>
+                                    <th>Proporção Rede</th>
+                                    <th>Variação %</th>
+                                    <th>Previsão</th>
+                                    <th>Nível</th>
+                                    <th>Ação</th>
+                                </tr>
+                            </thead>
+                            <tbody id="detailed-table-body">
+                                <!-- Dados serão carregados via JavaScript -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Legend Section -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card fade-in">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-info-circle mr-2"></i>
+                        Legenda dos Dados
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6>Descrição dos Campos:</h6>
+                            <ul class="list-unstyled" id="legend-list">
+                                <!-- Legenda será carregada via JavaScript -->
+                            </ul>
+                        </div>
+                        <div class="col-md-6">
+                            <h6>Níveis de Cluster:</h6>
+                            <div class="mb-2">
+                                <span class="level-badge level-alto mr-2">Alto</span>
+                                <span class="text-muted">Preparar autoscaling; adiar manutenção; reforçar capacidade.</span>
+                            </div>
+                            <div class="mb-2">
+                                <span class="level-badge level-medio mr-2">Médio</span>
+                                <span class="text-muted">Monitorar; ajustar autoscaling conforme tendência.</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Export Section -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card fade-in">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-download mr-2"></i>
+                        Exportar Dados
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <button class="btn btn-success btn-block" onclick="exportToCSV()">
+                                <i class="fas fa-file-csv mr-2"></i>
+                                Exportar CSV
+                            </button>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <button class="btn btn-primary btn-block" onclick="exportToJSON()">
+                                <i class="fas fa-file-code mr-2"></i>
+                                Exportar JSON
+                            </button>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <button class="btn btn-warning btn-block" onclick="printDashboard()">
+                                <i class="fas fa-print mr-2"></i>
+                                Imprimir Dashboard
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let levelChart, predictionChart, timeDistributionChart, correlationChart, timeSeriesChart, networkProportionChart;
+let currentData = null;
+
+document.addEventListener('DOMContentLoaded', function() {
+    loadDashboardData();
+    
+    // Animar cards de estatísticas
+    anime({
+        targets: '.stat-card',
+        translateY: [50, 0],
+        opacity: [0, 1],
+        duration: 800,
+        delay: anime.stagger(100),
+        easing: 'easeOutExpo'
+    });
+});
+
+function loadDashboardData() {
+    fetch('/api/data')
+        .then(response => response.json())
+        .then(data => {
+            currentData = data;
+            updateStatistics(data);
+            createLevelChart(data);
+            createPredictionChart(data);
+            createTimeDistributionChart(data);
+            createCorrelationChart(data);
+            createTimeSeriesChart(data);
+            createNetworkProportionChart(data);
+            populateClustersTable(data);
+            createRankingCards(data);
+            updateDetailedTable(data);
+            updateLegend(data);
+            generateAIRecommendations(data);
+            generateOperationalInsights(data);
+        })
+        .catch(error => {
+            console.error('Erro ao carregar dados:', error);
+        });
+}
+
+function updateStatistics(data) {
+    const totalClusters = data.clusters.length;
+    const highLevel = data.clusters.filter(cluster => cluster.level === 'alto').length;
+    const mediumLevel = data.clusters.filter(cluster => cluster.level === 'médio').length;
+    const totalInstances = data.clusters.reduce((sum, cluster) => sum + cluster.instances.length, 0);
+    
+    animateNumber('total-clusters', totalClusters);
+    animateNumber('high-level-clusters', highLevel);
+    animateNumber('medium-level-clusters', mediumLevel);
+    animateNumber('total-instances', totalInstances);
+}
+
+function createLevelChart(data) {
+    const ctx = document.getElementById('levelChart').getContext('2d');
+    
+    const levelCounts = data.clusters.reduce((acc, cluster) => {
+        acc[cluster.level] = (acc[cluster.level] || 0) + 1;
+        return acc;
+    }, {});
+    
+    levelChart = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+            labels: Object.keys(levelCounts).map(level => level.charAt(0).toUpperCase() + level.slice(1)),
+            datasets: [{
+                data: Object.values(levelCounts),
+                backgroundColor: [
+                    '#ff6b6b',
+                    '#feca57'
+                ],
+                borderWidth: 0
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'bottom',
+                    labels: {
+                        padding: 20,
+                        usePointStyle: true
+                    }
+                }
+            }
+        }
+    });
+}
+
+function createPredictionChart(data) {
+    const ctx = document.getElementById('predictionChart').getContext('2d');
+    
+    const sortedClusters = [...data.clusters].sort((a, b) => b.baseline_prediction - a.baseline_prediction);
+    
+    predictionChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: sortedClusters.map(cluster => `Cluster ${cluster.cluster_id}`),
+            datasets: [{
+                label: 'Previsão',
+                data: sortedClusters.map(cluster => cluster.baseline_prediction),
+                backgroundColor: sortedClusters.map(cluster => 
+                    cluster.level === 'alto' ? '#ff6b6b' : '#feca57'
+                ),
+                borderRadius: 8
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    display: false
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        callback: function(value) {
+                            return formatNumber(value);
+                        }
+                    }
+                }
+            }
+        }
+    });
+}
+
+function createTimeDistributionChart(data) {
+    const ctx = document.getElementById('timeDistributionChart').getContext('2d');
+    
+    const timeRanges = {
+        'Madrugada (0-6h)': 0,
+        'Manhã (6-12h)': 0,
+        'Tarde (12-18h)': 0,
+        'Noite (18-24h)': 0
+    };
+    
+    data.clusters.forEach(cluster => {
+        cluster.instances.forEach(instance => {
+            const hour = instance.hora;
+            if (hour >= 0 && hour < 6) timeRanges['Madrugada (0-6h)']++;
+            else if (hour >= 6 && hour < 12) timeRanges['Manhã (6-12h)']++;
+            else if (hour >= 12 && hour < 18) timeRanges['Tarde (12-18h)']++;
+            else timeRanges['Noite (18-24h)']++;
+        });
+    });
+    
+    timeDistributionChart = new Chart(ctx, {
+        type: 'pie',
+        data: {
+            labels: Object.keys(timeRanges),
+            datasets: [{
+                data: Object.values(timeRanges),
+                backgroundColor: [
+                    '#3498db',
+                    '#e74c3c',
+                    '#f39c12',
+                    '#2ecc71'
+                ],
+                borderWidth: 0
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'bottom'
+                }
+            }
+        }
+    });
+}
+
+function createCorrelationChart(data) {
+    const ctx = document.getElementById('correlationChart').getContext('2d');
+    
+    const correlationData = [];
+    data.clusters.forEach(cluster => {
+        cluster.instances.forEach(instance => {
+            correlationData.push({
+                x: instance.hora,
+                y: cluster.baseline_prediction
+            });
+        });
+    });
+    
+    correlationChart = new Chart(ctx, {
+        type: 'scatter',
+        data: {
+            datasets: [{
+                label: 'Hora vs Previsão',
+                data: correlationData,
+                backgroundColor: 'rgba(52, 152, 219, 0.6)',
+                borderColor: 'rgba(52, 152, 219, 1)',
+                pointRadius: 8
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                x: {
+                    title: {
+                        display: true,
+                        text: 'Hora do Dia'
+                    }
+                },
+                y: {
+                    title: {
+                        display: true,
+                        text: 'Previsão'
+                    },
+                    ticks: {
+                        callback: function(value) {
+                            return formatNumber(value);
+                        }
+                    }
+                }
+            }
+        }
+    });
+}
+
+function createTimeSeriesChart(data) {
+    const ctx = document.getElementById('timeSeriesChart').getContext('2d');
+    
+    // Simular dados temporais baseados nas instâncias
+    const timeData = [];
+    data.clusters.forEach(cluster => {
+        cluster.instances.forEach(instance => {
+            timeData.push({
+                time: instance.hora,
+                prediction: cluster.baseline_prediction,
+                cluster: cluster.cluster_id,
+                level: cluster.level
+            });
+        });
+    });
+    
+    timeData.sort((a, b) => a.time - b.time);
+    
+    timeSeriesChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: timeData.map(d => `${d.time}:00`),
+            datasets: data.clusters.map((cluster, index) => ({
+                label: `Cluster ${cluster.cluster_id}`,
+                data: timeData.filter(d => d.cluster === cluster.cluster_id).map(d => d.prediction),
+                borderColor: cluster.level === 'alto' ? '#ff6b6b' : '#feca57',
+                backgroundColor: cluster.level === 'alto' ? 'rgba(255, 107, 107, 0.1)' : 'rgba(254, 202, 87, 0.1)',
+                tension: 0.4,
+                fill: false
+            }))
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'top'
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        callback: function(value) {
+                            return formatNumber(value);
+                        }
+                    }
+                }
+            }
+        }
+    });
+}
+
+function createNetworkProportionChart(data) {
+    const ctx = document.getElementById('networkProportionChart').getContext('2d');
+    
+    const proportions = data.clusters.map(cluster => 
+        cluster.instances.reduce((sum, instance) => sum + instance.proporcao_rede, 0) / cluster.instances.length
+    );
+    
+    networkProportionChart = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+            labels: data.clusters.map(cluster => `Cluster ${cluster.cluster_id}`),
+            datasets: [{
+                data: proportions,
+                backgroundColor: [
+                    '#ff6b6b',
+                    '#4ecdc4',
+                    '#45b7d1',
+                    '#96ceb4'
+                ]
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'bottom'
+                }
+            }
+        }
+    });
+}
+
+function populateClustersTable(data) {
+    const tbody = document.getElementById('clusters-table');
+    tbody.innerHTML = '';
+    
+    data.clusters.forEach(cluster => {
+        const instance = cluster.instances[0]; // Pegar primeira instância para análise
+        const hora = instance.hora;
+        const variacao = instance.pct_var_jogadores;
+        
+        // Determinar status do servidor
+        let status = '';
+        let statusClass = '';
+        if (cluster.level === 'alto') {
+            status = 'Sobrecarregado';
+            statusClass = 'text-danger';
+        } else {
+            status = 'Normal';
+            statusClass = 'text-success';
+        }
+        
+        // Determinar horário pico
+        let horarioPico = '';
+        if (hora >= 18 && hora <= 22) {
+            horarioPico = 'Pico Noturno';
+        } else if (hora >= 12 && hora <= 14) {
+            horarioPico = 'Pico Almoço';
+        } else if (hora >= 9 && hora <= 11) {
+            horarioPico = 'Pico Manhã';
+        } else {
+            horarioPico = 'Horário Normal';
+        }
+        
+        // Determinar capacidade atual
+        const capacidade = Math.round((cluster.baseline_prediction / 100000) * 100);
+        let capacidadeStatus = '';
+        if (capacidade > 80) {
+            capacidadeStatus = `${capacidade}% - Crítica`;
+        } else if (capacidade > 60) {
+            capacidadeStatus = `${capacidade}% - Alta`;
+        } else {
+            capacidadeStatus = `${capacidade}% - Normal`;
+        }
+        
+        // Determinar tendência
+        let tendencia = '';
+        let tendenciaClass = '';
+        if (variacao > 1) {
+            tendencia = 'Crescendo';
+            tendenciaClass = 'text-success';
+        } else if (variacao < -1) {
+            tendencia = 'Diminuindo';
+            tendenciaClass = 'text-warning';
+        } else {
+            tendencia = 'Estável';
+            tendenciaClass = 'text-info';
+        }
+        
+        // Determinar prioridade
+        let prioridade = '';
+        let prioridadeClass = '';
+        if (cluster.level === 'alto') {
+            prioridade = 'ALTA';
+            prioridadeClass = 'badge-danger';
+        } else {
+            prioridade = 'MÉDIA';
+            prioridadeClass = 'badge-warning';
+        }
+        
+        const row = document.createElement('tr');
+        row.innerHTML = `
+            <td><strong>Cluster ${cluster.cluster_id}</strong></td>
+            <td><strong>${formatNumber(cluster.baseline_prediction)} jogadores</strong></td>
+            <td><span class="${statusClass}"><i class="fas fa-server mr-1"></i>${status}</span></td>
+            <td><small>${cluster.action}</small></td>
+            <td><i class="fas fa-clock mr-1"></i>${horarioPico}</td>
+            <td>${capacidadeStatus}</td>
+            <td><span class="${tendenciaClass}"><i class="fas fa-arrow-${variacao > 0 ? 'up' : variacao < 0 ? 'down' : 'right'} mr-1"></i>${tendencia}</span></td>
+            <td><span class="badge ${prioridadeClass}">${prioridade}</span></td>
+        `;
+        tbody.appendChild(row);
+    });
+}
+
+function createRankingCards(data) {
+    const container = document.getElementById('ranking-cards');
+    container.innerHTML = '';
+    
+    data.ranking.forEach((item, index) => {
+        const card = document.createElement('div');
+        card.className = 'col-lg-3 col-md-6 mb-3';
+        card.innerHTML = `
+            <div class="card h-100">
+                <div class="card-body text-center">
+                    <div class="mb-3">
+                        <span class="badge badge-primary badge-pill" style="font-size: 1.2rem; padding: 10px 15px;">
+                            #${item.posicao}
+                        </span>
+                    </div>
+                    <h5 class="card-title">Cluster ${item.cluster_id}</h5>
+                    <p class="card-text">
+                        <strong>${formatNumber(item.prediction)}</strong><br>
+                        <span class="level-badge level-${item.level}">${item.level.charAt(0).toUpperCase() + item.level.slice(1)}</span>
+                    </p>
+                </div>
+            </div>
+        `;
+        container.appendChild(card);
+    });
+    
+    // Animar cards de ranking
+    anime({
+        targets: '#ranking-cards .card',
+        translateY: [30, 0],
+        opacity: [0, 1],
+        duration: 600,
+        delay: anime.stagger(100),
+        easing: 'easeOutExpo'
+    });
+}
+
+function updateDetailedTable(data) {
+    const tbody = document.getElementById('detailed-table-body');
+    tbody.innerHTML = '';
+    
+    data.clusters.forEach(cluster => {
+        cluster.instances.forEach(instance => {
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td><strong>${cluster.cluster_id}</strong></td>
+                <td>${instance.hora}:00</td>
+                <td>${instance.final_de_semana ? 'Sim' : 'Não'}</td>
+                <td>${formatNumber(instance.media_movel_10)}</td>
+                <td>${(instance.proporcao_rede * 100).toFixed(1)}%</td>
+                <td>${instance.pct_var_jogadores > 0 ? '+' : ''}${instance.pct_var_jogadores}%</td>
+                <td>${formatNumber(cluster.baseline_prediction)}</td>
+                <td><span class="level-badge level-${cluster.level}">${cluster.level.charAt(0).toUpperCase() + cluster.level.slice(1)}</span></td>
+                <td>${cluster.action}</td>
+            `;
+            tbody.appendChild(row);
+        });
+    });
+}
+
+function updateLegend(data) {
+    const legendList = document.getElementById('legend-list');
+    legendList.innerHTML = '';
+    
+    Object.entries(data.legend).forEach(([key, description]) => {
+        const li = document.createElement('li');
+        li.className = 'mb-2';
+        li.innerHTML = `<strong>${key}:</strong> ${description}`;
+        legendList.appendChild(li);
+    });
+}
+
+function exportToCSV() {
+    if (!currentData) return;
+    
+    let csv = 'Cluster ID,Hora,Fim de Semana,Média Móvel,Proporção Rede,Variação %,Previsão,Nível,Ação\n';
+    
+    currentData.clusters.forEach(cluster => {
+        cluster.instances.forEach(instance => {
+            csv += `${cluster.cluster_id},${instance.hora},${instance.final_de_semana},${instance.media_movel_10},${instance.proporcao_rede},${instance.pct_var_jogadores},${cluster.baseline_prediction},${cluster.level},"${cluster.action}"\n`;
+        });
+    });
+    
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'mine_tracker_dados.csv';
+    a.click();
+    window.URL.revokeObjectURL(url);
+}
+
+function exportToJSON() {
+    if (!currentData) return;
+    
+    const dataStr = JSON.stringify(currentData, null, 2);
+    const blob = new Blob([dataStr], { type: 'application/json' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'mine_tracker_dados.json';
+    a.click();
+    window.URL.revokeObjectURL(url);
+}
+
+function printDashboard() {
+    window.print();
+}
+
+function generateAIRecommendations(data) {
+    const container = document.getElementById('ai-recommendations');
+    container.innerHTML = '';
+    
+    const highLevelClusters = data.clusters.filter(cluster => cluster.level === 'alto');
+    const mediumLevelClusters = data.clusters.filter(cluster => cluster.level === 'médio');
+    
+    // Recomendação para clusters de alto nível
+    if (highLevelClusters.length > 0) {
+        const card = document.createElement('div');
+        card.className = 'col-md-6 mb-3';
+        card.innerHTML = `
+            <div class="alert alert-danger">
+                <h6><i class="fas fa-exclamation-triangle mr-2"></i>Ação Imediata Necessária</h6>
+                <p class="mb-2"><strong>${highLevelClusters.length} cluster(s) em nível ALTO</strong></p>
+                <ul class="mb-0">
+                    <li>Ativar autoscaling imediatamente</li>
+                    <li>Adiar manutenções programadas</li>
+                    <li>Preparar servidores adicionais</li>
+                    <li>Monitorar CPU e RAM em tempo real</li>
+                </ul>
+            </div>
+        `;
+        container.appendChild(card);
+    }
+    
+    // Recomendação para clusters de médio nível
+    if (mediumLevelClusters.length > 0) {
+        const card = document.createElement('div');
+        card.className = 'col-md-6 mb-3';
+        card.innerHTML = `
+            <div class="alert alert-warning">
+                <h6><i class="fas fa-eye mr-2"></i>Monitoramento Ativo</h6>
+                <p class="mb-2"><strong>${mediumLevelClusters.length} cluster(s) em nível MÉDIO</strong></p>
+                <ul class="mb-0">
+                    <li>Monitorar tendências de crescimento</li>
+                    <li>Preparar plano de escalonamento</li>
+                    <li>Ajustar autoscaling conforme necessário</li>
+                    <li>Manter backup de recursos</li>
+                </ul>
+            </div>
+        `;
+        container.appendChild(card);
+    }
+    
+    // Recomendação geral baseada nos dados
+    const totalPlayers = data.clusters.reduce((sum, cluster) => sum + cluster.baseline_prediction, 0);
+    const avgPlayers = Math.round(totalPlayers / data.clusters.length);
+    
+    const generalCard = document.createElement('div');
+    generalCard.className = 'col-12 mb-3';
+    generalCard.innerHTML = `
+        <div class="alert alert-info">
+            <h6><i class="fas fa-robot mr-2"></i>Análise Geral da IA</h6>
+            <p class="mb-2">
+                <strong>Previsão Total:</strong> ${formatNumber(totalPlayers)} jogadores esperados<br>
+                <strong>Média por Cluster:</strong> ${formatNumber(avgPlayers)} jogadores<br>
+                <strong>Recomendação:</strong> ${totalPlayers > 200000 ? 'Sistema sob alta demanda - considere expansão' : 'Sistema operando dentro da capacidade normal'}
+            </p>
+        </div>
+    `;
+    container.appendChild(generalCard);
+}
+
+function generateOperationalInsights(data) {
+    const container = document.getElementById('operational-insights');
+    container.innerHTML = '';
+    
+    // Analisar padrões de horário
+    const timePatterns = {};
+    data.clusters.forEach(cluster => {
+        cluster.instances.forEach(instance => {
+            const hour = instance.hora;
+            if (!timePatterns[hour]) {
+                timePatterns[hour] = [];
+            }
+            timePatterns[hour].push({
+                cluster: cluster.cluster_id,
+                players: cluster.baseline_prediction,
+                level: cluster.level
+            });
+        });
+    });
+    
+    // Encontrar horário de maior demanda
+    const peakHour = Object.keys(timePatterns).reduce((a, b) => 
+        timePatterns[a].reduce((sum, item) => sum + item.players, 0) > 
+        timePatterns[b].reduce((sum, item) => sum + item.players, 0) ? a : b
+    );
+    
+    const peakHourData = timePatterns[peakHour];
+    const totalPeakPlayers = peakHourData.reduce((sum, item) => sum + item.players, 0);
+    
+    // Insight 1: Horário de pico
+    const insight1 = document.createElement('div');
+    insight1.className = 'col-lg-4 col-md-6 mb-3';
+    insight1.innerHTML = `
+        <div class="card h-100 border-primary">
+            <div class="card-body">
+                <h6 class="card-title text-primary">
+                    <i class="fas fa-clock mr-2"></i>Horário de Pico
+                </h6>
+                <p class="card-text">
+                    <strong>${peakHour}:00</strong> é o horário de maior demanda<br>
+                    <span class="text-muted">${formatNumber(totalPeakPlayers)} jogadores esperados</span>
+                </p>
+                <small class="text-muted">
+                    <i class="fas fa-lightbulb mr-1"></i>
+                    Prepare servidores extras neste horário
+                </small>
+            </div>
+        </div>
+    `;
+    container.appendChild(insight1);
+    
+    // Insight 2: Análise de capacidade
+    const totalCapacity = data.clusters.reduce((sum, cluster) => sum + cluster.baseline_prediction, 0);
+    const capacityStatus = totalCapacity > 200000 ? 'Crítica' : totalCapacity > 150000 ? 'Alta' : 'Normal';
+    const capacityClass = totalCapacity > 200000 ? 'danger' : totalCapacity > 150000 ? 'warning' : 'success';
+    
+    const insight2 = document.createElement('div');
+    insight2.className = 'col-lg-4 col-md-6 mb-3';
+    insight2.innerHTML = `
+        <div class="card h-100 border-${capacityClass}">
+            <div class="card-body">
+                <h6 class="card-title text-${capacityClass}">
+                    <i class="fas fa-chart-line mr-2"></i>Capacidade do Sistema
+                </h6>
+                <p class="card-text">
+                    <strong>${formatNumber(totalCapacity)} jogadores</strong><br>
+                    <span class="text-${capacityClass}">Status: ${capacityStatus}</span>
+                </p>
+                <small class="text-muted">
+                    <i class="fas fa-lightbulb mr-1"></i>
+                    ${capacityStatus === 'Crítica' ? 'Expansão urgente necessária' : 
+                      capacityStatus === 'Alta' ? 'Monitore de perto' : 'Sistema estável'}
+                </small>
+            </div>
+        </div>
+    `;
+    container.appendChild(insight2);
+    
+    // Insight 3: Recomendação de escalonamento
+    const highLevelCount = data.clusters.filter(c => c.level === 'alto').length;
+    const scalingRecommendation = highLevelCount > 1 ? 'Escalonamento Imediato' : 
+                                 highLevelCount === 1 ? 'Escalonamento Preventivo' : 'Monitoramento Normal';
+    const scalingClass = highLevelCount > 1 ? 'danger' : highLevelCount === 1 ? 'warning' : 'success';
+    
+    const insight3 = document.createElement('div');
+    insight3.className = 'col-lg-4 col-md-6 mb-3';
+    insight3.innerHTML = `
+        <div class="card h-100 border-${scalingClass}">
+            <div class="card-body">
+                <h6 class="card-title text-${scalingClass}">
+                    <i class="fas fa-expand-arrows-alt mr-2"></i>Escalonamento
+                </h6>
+                <p class="card-text">
+                    <strong>${scalingRecommendation}</strong><br>
+                    <span class="text-muted">${highLevelCount} cluster(s) crítico(s)</span>
+                </p>
+                <small class="text-muted">
+                    <i class="fas fa-lightbulb mr-1"></i>
+                    ${highLevelCount > 1 ? 'Ative autoscaling agora' : 
+                      highLevelCount === 1 ? 'Prepare recursos adicionais' : 'Continue monitorando'}
+                </small>
+            </div>
+        </div>
+    `;
+    container.appendChild(insight3);
+    
+    // Animar os insights
+    anime({
+        targets: '#operational-insights .card',
+        translateY: [30, 0],
+        opacity: [0, 1],
+        duration: 600,
+        delay: anime.stagger(100),
+        easing: 'easeOutExpo'
+    });
+}
+
+function animateNumber(elementId, finalValue) {
+    const element = document.getElementById(elementId);
+    const startValue = 0;
+    const duration = 1500;
+    const startTime = performance.now();
+    
+    function updateNumber(currentTime) {
+        const elapsed = currentTime - startTime;
+        const progress = Math.min(elapsed / duration, 1);
+        const currentValue = Math.floor(startValue + (finalValue - startValue) * progress);
+        
+        element.textContent = formatNumber(currentValue);
+        
+        if (progress < 1) {
+            requestAnimationFrame(updateNumber);
+        }
+    }
+    
+    requestAnimationFrame(updateNumber);
+}
+</script>
+{% endblock %}
