@@ -1,48 +1,186 @@
 ---
-- name: Run Kedro pipelines one by one
+- name: Rodar pipelines do Kedro (logs completos por etapa)
   hosts: all
   gather_facts: false
-
   vars:
-    project_dir: /home/serverlab/stack-mine-tracker/mine-tracker
-    venv_python: /home/serverlab/stack-mine-tracker/env/bin/python
-    log_file: "{{ project_dir }}/info.log"
+    # Candidatos para encontrar o diretório do projeto
+    project_dir_candidates:
+      - /home/serverlab/stack-mine-track/mine-tracker
+      - /home/serverlab/stack-mine-track/stack-mine-track/mine-tracker
+      - /home/serverlab/mine-tracker
+    # Candidatos para o python do venv
+    venv_python_candidates:
+      - /home/serverlab/stack-mine-track/env/bin/python
+      - /home/serverlab/env/bin/python
+
+    # Privilégios (como no seu exemplo)
+    ansible_become: true
+    ansible_become_method: sudo
+    ansible_become_password: verderoot
 
   tasks:
-    - name: Check Kedro is available in the virtualenv
+    - name: Verificar usuário atual (com sudo)
+      ansible.builtin.command: whoami
+      become: true
+      register: whoami_result
+
+    - name: Exibir usuário efetivo
+      ansible.builtin.debug:
+        msg: "Executando como: {{ whoami_result.stdout }}"
+
+    # Descobrir project_dir
+    - name: Checar candidatos de project_dir
+      ansible.builtin.stat:
+        path: "{{ item }}"
+      loop: "{{ project_dir_candidates }}"
+      register: project_stats
+      become: false
+
+    - name: Definir project_dir encontrado
+      ansible.builtin.set_fact:
+        project_dir: "{{ (project_stats.results | selectattr('stat.exists','equalto',true) | map(attribute='stat.path') | list)[0] | default(omit) }}"
+      become: false
+
+    - name: Falhar se project_dir não encontrado (listar pais)
+      ansible.builtin.shell: |
+        set -e
+        for d in {{ project_dir_candidates | join(' ') }}; do
+          echo "Tentou: $d"
+          parent="$(dirname "$d")"
+          echo "Pai: $parent"
+          [ -d "$parent" ] && ls -la "$parent" || echo "(pai inexistente)"
+          echo "------"
+        done
+        exit 1
+      args:
+        executable: /bin/bash
+      when: project_dir is not defined
+      become: false
+
+    - name: Mostrar project_dir selecionado
+      ansible.builtin.debug:
+        msg: "project_dir => {{ project_dir }}"
+      become: false
+
+    # Descobrir venv_python
+    - name: Checar candidatos de venv_python
+      ansible.builtin.stat:
+        path: "{{ item }}"
+      loop: "{{ venv_python_candidates }}"
+      register: venv_stats
+      become: false
+
+    - name: Definir venv_python encontrado
+      ansible.builtin.set_fact:
+        venv_python: "{{ (venv_stats.results | selectattr('stat.exists','equalto',true) | map(attribute='stat.path') | list)[0] | default(omit) }}"
+      become: false
+
+    - name: Falhar se venv_python não encontrado
+      ansible.builtin.fail:
+        msg: "Python do venv não encontrado. Verifique: {{ venv_python_candidates | join(', ') }}"
+      when: venv_python is not defined
+      become: false
+
+    - name: Mostrar venv_python selecionado
+      ansible.builtin.debug:
+        msg: "venv_python => {{ venv_python }}"
+      become: false
+
+    # Definir o log_file
+    - name: Definir caminho do log
+      ansible.builtin.set_fact:
+        log_file: "{{ project_dir }}/info.log"
+      become: false
+
+    - name: Verificar versão do Kedro no venv
       ansible.builtin.command: "{{ venv_python }} -m kedro --version"
       args:
         chdir: "{{ project_dir }}"
       register: kedro_version
       changed_when: false
+      become: false
+      environment:
+        KEDRO_DISABLE_TELEMETRY: "1"
 
-    - name: Run Kedro pipeline mine
+    - name: Exibir versão do Kedro
+      ansible.builtin.debug:
+        msg: "Kedro versão: {{ kedro_version.stdout | default('(sem saída)') }}"
+      become: false
+
+    # =========================
+    # PIPELINE: MINE
+    # =========================
+    - name: Rodar pipeline mine
       ansible.builtin.shell: |
         set -euo pipefail
-        echo "==== $(date -Is) Running pipeline: mine ====" | tee -a "{{ log_file }}"
-        "{{ venv_python }}" -m kedro run --pipeline mine 2>&1 | tee -a "{{ log_file }}"
-        echo "==== $(date -Is) Finished pipeline: mine ====" | tee -a "{{ log_file }}"
+        {
+          echo "==== $(date -Is) Pipeline: mine ===="
+          "{{ venv_python }}" -m kedro run --pipeline mine 2>&1
+          echo "==== $(date -Is) Fim: mine ===="
+        } | tee -a "{{ log_file }}"
       args:
         chdir: "{{ project_dir }}"
         executable: /bin/bash
+      environment:
+        KEDRO_DISABLE_TELEMETRY: "1"
+        PATH: "{{ (venv_python | dirname) | dirname }}/bin:{{ ansible_env.PATH | default('/usr/bin:/bin') }}"
+      become: false
+      register: mine_log
+      changed_when: false
 
-    - name: Run Kedro pipeline model
+    - name: Mostrar log completo da etapa mine
+      ansible.builtin.debug:
+        msg: "{{ mine_log.stdout }}"
+      become: false
+
+    # =========================
+    # PIPELINE: MODEL
+    # =========================
+    - name: Rodar pipeline model
       ansible.builtin.shell: |
         set -euo pipefail
-        echo "==== $(date -Is) Running pipeline: model ====" | tee -a "{{ log_file }}"
-        "{{ venv_python }}" -m kedro run --pipeline model 2>&1 | tee -a "{{ log_file }}"
-        echo "==== $(date -Is) Finished pipeline: model ====" | tee -a "{{ log_file }}"
+        {
+          echo "==== $(date -Is) Pipeline: model ===="
+          "{{ venv_python }}" -m kedro run --pipeline model 2>&1
+          echo "==== $(date -Is) Fim: model ===="
+        } | tee -a "{{ log_file }}"
       args:
         chdir: "{{ project_dir }}"
         executable: /bin/bash
+      environment:
+        KEDRO_DISABLE_TELEMETRY: "1"
+        PATH: "{{ (venv_python | dirname) | dirname }}/bin:{{ ansible_env.PATH | default('/usr/bin:/bin') }}"
+      become: false
+      register: model_log
+      changed_when: false
 
-    - name: Run Kedro pipeline inference
+    - name: Mostrar log completo da etapa model
+      ansible.builtin.debug:
+        msg: "{{ model_log.stdout }}"
+      become: false
+
+    # =========================
+    # PIPELINE: INFERENCE
+    # =========================
+    - name: Rodar pipeline inference
       ansible.builtin.shell: |
         set -euo pipefail
-        echo "==== $(date -Is) Running pipeline: inference ====" | tee -a "{{ log_file }}"
-        "{{ venv_python }}" -m kedro run --pipeline inference 2>&1 | tee -a "{{ log_file }}"
-        echo "==== $(date -Is) Finished pipeline: inference ====" | tee -a "{{ log_file }}"
+        {
+          echo "==== $(date -Is) Pipeline: inference ===="
+          "{{ venv_python }}" -m kedro run --pipeline inference 2>&1
+          echo "==== $(date -Is) Fim: inference ===="
+        } | tee -a "{{ log_file }}"
       args:
         chdir: "{{ project_dir }}"
         executable: /bin/bash
+      environment:
+        KEDRO_DISABLE_TELEMETRY: "1"
+        PATH: "{{ (venv_python | dirname) | dirname }}/bin:{{ ansible_env.PATH | default('/usr/bin:/bin') }}"
+      become: false
+      register: inference_log
+      changed_when: false
 
+    - name: Mostrar log completo da etapa inference
+      ansible.builtin.debug:
+        msg: "{{ inference_log.stdout }}"
+      become: false
