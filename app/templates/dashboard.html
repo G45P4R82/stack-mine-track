@@ -66,14 +66,14 @@
         </div>
     </div>
 
-    <!-- Charts Row 1 -->
+    <!-- Operational Charts -->
     <div class="row mb-4">
         <div class="col-lg-6 mb-4">
             <div class="card fade-in">
                 <div class="card-header">
                     <h5 class="mb-0">
                         <i class="fas fa-chart-pie mr-2"></i>
-                        Distribuição por Nível de Cluster
+                        Status dos Clusters
                     </h5>
                 </div>
                 <div class="card-body">
@@ -88,80 +88,12 @@
                 <div class="card-header">
                     <h5 class="mb-0">
                         <i class="fas fa-chart-bar mr-2"></i>
-                        Previsões por Cluster
+                        Carga de Jogadores por Cluster
                     </h5>
                 </div>
                 <div class="card-body">
                     <div class="chart-container">
                         <canvas id="predictionChart"></canvas>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Charts Row 2 -->
-    <div class="row mb-4">
-        <div class="col-lg-6 mb-4">
-            <div class="card fade-in">
-                <div class="card-header">
-                    <h5 class="mb-0">
-                        <i class="fas fa-clock mr-2"></i>
-                        Distribuição por Horário
-                    </h5>
-                </div>
-                <div class="card-body">
-                    <div class="chart-container">
-                        <canvas id="timeDistributionChart"></canvas>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <div class="col-lg-6 mb-4">
-            <div class="card fade-in">
-                <div class="card-header">
-                    <h5 class="mb-0">
-                        <i class="fas fa-chart-area mr-2"></i>
-                        Correlação: Hora vs Previsão
-                    </h5>
-                </div>
-                <div class="card-body">
-                    <div class="chart-container">
-                        <canvas id="correlationChart"></canvas>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Charts Row 3 -->
-    <div class="row mb-4">
-        <div class="col-lg-8 mb-4">
-            <div class="card fade-in">
-                <div class="card-header">
-                    <h5 class="mb-0">
-                        <i class="fas fa-chart-line mr-2"></i>
-                        Análise Temporal das Previsões
-                    </h5>
-                </div>
-                <div class="card-body">
-                    <div class="chart-container">
-                        <canvas id="timeSeriesChart"></canvas>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <div class="col-lg-4 mb-4">
-            <div class="card fade-in">
-                <div class="card-header">
-                    <h5 class="mb-0">
-                        <i class="fas fa-chart-doughnut mr-2"></i>
-                        Proporção de Rede
-                    </h5>
-                </div>
-                <div class="card-body">
-                    <div class="chart-container">
-                        <canvas id="networkProportionChart"></canvas>
                     </div>
                 </div>
             </div>
@@ -352,7 +284,7 @@
 
 {% block scripts %}
 <script>
-let levelChart, predictionChart, timeDistributionChart, correlationChart, timeSeriesChart, networkProportionChart;
+let levelChart, predictionChart;
 let currentData = null;
 
 document.addEventListener('DOMContentLoaded', function() {
@@ -377,10 +309,6 @@ function loadDashboardData() {
             updateStatistics(data);
             createLevelChart(data);
             createPredictionChart(data);
-            createTimeDistributionChart(data);
-            createCorrelationChart(data);
-            createTimeSeriesChart(data);
-            createNetworkProportionChart(data);
             populateClustersTable(data);
             createRankingCards(data);
             updateDetailedTable(data);
@@ -416,12 +344,14 @@ function createLevelChart(data) {
     levelChart = new Chart(ctx, {
         type: 'doughnut',
         data: {
-            labels: Object.keys(levelCounts).map(level => level.charAt(0).toUpperCase() + level.slice(1)),
+            labels: Object.keys(levelCounts).map(level => 
+                level === 'alto' ? 'Requer Atenção' : 'Estável'
+            ),
             datasets: [{
                 data: Object.values(levelCounts),
                 backgroundColor: [
                     '#ff6b6b',
-                    '#feca57'
+                    '#28a745'
                 ],
                 borderWidth: 0
             }]
@@ -452,10 +382,10 @@ function createPredictionChart(data) {
         data: {
             labels: sortedClusters.map(cluster => `Cluster ${cluster.cluster_id}`),
             datasets: [{
-                label: 'Previsão',
+                label: 'Jogadores Esperados',
                 data: sortedClusters.map(cluster => cluster.baseline_prediction),
                 backgroundColor: sortedClusters.map(cluster => 
-                    cluster.level === 'alto' ? '#ff6b6b' : '#feca57'
+                    cluster.level === 'alto' ? '#ff6b6b' : '#28a745'
                 ),
                 borderRadius: 8
             }]
@@ -471,160 +401,20 @@ function createPredictionChart(data) {
             scales: {
                 y: {
                     beginAtZero: true,
-                    ticks: {
-                        callback: function(value) {
-                            return formatNumber(value);
-                        }
-                    }
-                }
-            }
-        }
-    });
-}
-
-function createTimeDistributionChart(data) {
-    const ctx = document.getElementById('timeDistributionChart').getContext('2d');
-    
-    const timeRanges = {
-        'Madrugada (0-6h)': 0,
-        'Manhã (6-12h)': 0,
-        'Tarde (12-18h)': 0,
-        'Noite (18-24h)': 0
-    };
-    
-    data.clusters.forEach(cluster => {
-        cluster.instances.forEach(instance => {
-            const hour = instance.hora;
-            if (hour >= 0 && hour < 6) timeRanges['Madrugada (0-6h)']++;
-            else if (hour >= 6 && hour < 12) timeRanges['Manhã (6-12h)']++;
-            else if (hour >= 12 && hour < 18) timeRanges['Tarde (12-18h)']++;
-            else timeRanges['Noite (18-24h)']++;
-        });
-    });
-    
-    timeDistributionChart = new Chart(ctx, {
-        type: 'pie',
-        data: {
-            labels: Object.keys(timeRanges),
-            datasets: [{
-                data: Object.values(timeRanges),
-                backgroundColor: [
-                    '#3498db',
-                    '#e74c3c',
-                    '#f39c12',
-                    '#2ecc71'
-                ],
-                borderWidth: 0
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                legend: {
-                    position: 'bottom'
-                }
-            }
-        }
-    });
-}
-
-function createCorrelationChart(data) {
-    const ctx = document.getElementById('correlationChart').getContext('2d');
-    
-    const correlationData = [];
-    data.clusters.forEach(cluster => {
-        cluster.instances.forEach(instance => {
-            correlationData.push({
-                x: instance.hora,
-                y: cluster.baseline_prediction
-            });
-        });
-    });
-    
-    correlationChart = new Chart(ctx, {
-        type: 'scatter',
-        data: {
-            datasets: [{
-                label: 'Hora vs Previsão',
-                data: correlationData,
-                backgroundColor: 'rgba(52, 152, 219, 0.6)',
-                borderColor: 'rgba(52, 152, 219, 1)',
-                pointRadius: 8
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            scales: {
-                x: {
                     title: {
                         display: true,
-                        text: 'Hora do Dia'
-                    }
-                },
-                y: {
-                    title: {
-                        display: true,
-                        text: 'Previsão'
+                        text: 'Número de Jogadores'
                     },
                     ticks: {
                         callback: function(value) {
                             return formatNumber(value);
                         }
                     }
-                }
-            }
-        }
-    });
-}
-
-function createTimeSeriesChart(data) {
-    const ctx = document.getElementById('timeSeriesChart').getContext('2d');
-    
-    // Simular dados temporais baseados nas instâncias
-    const timeData = [];
-    data.clusters.forEach(cluster => {
-        cluster.instances.forEach(instance => {
-            timeData.push({
-                time: instance.hora,
-                prediction: cluster.baseline_prediction,
-                cluster: cluster.cluster_id,
-                level: cluster.level
-            });
-        });
-    });
-    
-    timeData.sort((a, b) => a.time - b.time);
-    
-    timeSeriesChart = new Chart(ctx, {
-        type: 'line',
-        data: {
-            labels: timeData.map(d => `${d.time}:00`),
-            datasets: data.clusters.map((cluster, index) => ({
-                label: `Cluster ${cluster.cluster_id}`,
-                data: timeData.filter(d => d.cluster === cluster.cluster_id).map(d => d.prediction),
-                borderColor: cluster.level === 'alto' ? '#ff6b6b' : '#feca57',
-                backgroundColor: cluster.level === 'alto' ? 'rgba(255, 107, 107, 0.1)' : 'rgba(254, 202, 87, 0.1)',
-                tension: 0.4,
-                fill: false
-            }))
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                legend: {
-                    position: 'top'
-                }
-            },
-            scales: {
-                y: {
-                    beginAtZero: true,
-                    ticks: {
-                        callback: function(value) {
-                            return formatNumber(value);
-                        }
+                },
+                x: {
+                    title: {
+                        display: true,
+                        text: 'Clusters de Servidores'
                     }
                 }
             }
@@ -632,38 +422,6 @@ function createTimeSeriesChart(data) {
     });
 }
 
-function createNetworkProportionChart(data) {
-    const ctx = document.getElementById('networkProportionChart').getContext('2d');
-    
-    const proportions = data.clusters.map(cluster => 
-        cluster.instances.reduce((sum, instance) => sum + instance.proporcao_rede, 0) / cluster.instances.length
-    );
-    
-    networkProportionChart = new Chart(ctx, {
-        type: 'doughnut',
-        data: {
-            labels: data.clusters.map(cluster => `Cluster ${cluster.cluster_id}`),
-            datasets: [{
-                data: proportions,
-                backgroundColor: [
-                    '#ff6b6b',
-                    '#4ecdc4',
-                    '#45b7d1',
-                    '#96ceb4'
-                ]
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                legend: {
-                    position: 'bottom'
-                }
-            }
-        }
-    });
-}
 
 function populateClustersTable(data) {
     const tbody = document.getElementById('clusters-table');
