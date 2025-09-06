@@ -173,36 +173,43 @@
         </div>
     </div>
 
-    <!-- Detailed Instances Table -->
+    <!-- Observado vs Previsão Chart -->
     <div class="row mb-4">
         <div class="col-12">
             <div class="card fade-in">
                 <div class="card-header">
                     <h5 class="mb-0">
-                        <i class="fas fa-list mr-2"></i>
-                        Dados Detalhados das Instâncias
+                        <i class="fas fa-chart-line mr-2"></i>
+                        Observado vs Previsão - Análise Temporal
                     </h5>
                 </div>
                 <div class="card-body">
-                    <div class="table-responsive">
-                        <table class="table table-hover" id="detailed-table">
-                            <thead>
-                                <tr>
-                                    <th>Cluster ID</th>
-                                    <th>Hora</th>
-                                    <th>Fim de Semana</th>
-                                    <th>Média Móvel</th>
-                                    <th>Proporção Rede</th>
-                                    <th>Variação %</th>
-                                    <th>Previsão</th>
-                                    <th>Nível</th>
-                                    <th>Ação</th>
-                                </tr>
-                            </thead>
-                            <tbody id="detailed-table-body">
-                                <!-- Dados serão carregados via JavaScript -->
-                            </tbody>
-                        </table>
+                    <div class="chart-container">
+                        <canvas id="observedVsPredictionChart"></canvas>
+                    </div>
+                    <div class="mt-3">
+                        <div class="row">
+                            <div class="col-md-4">
+                                <div class="d-flex align-items-center">
+                                    <div class="mr-2" style="width: 20px; height: 3px; background-color: #3498db;"></div>
+                                    <small><strong>Média Móvel (Observado)</strong></small>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="d-flex align-items-center">
+                                    <div class="mr-2" style="width: 20px; height: 3px; background-color: #e74c3c;"></div>
+                                    <small><strong>Previsão Baseline</strong></small>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="d-flex align-items-center">
+                                    <div class="mr-2" style="width: 12px; height: 12px; background-color: #ff6b6b; border-radius: 50%;"></div>
+                                    <small><strong>Nível Alto</strong></small>
+                                    <div class="ml-3 mr-2" style="width: 12px; height: 12px; background-color: #feca57; border-radius: 50%;"></div>
+                                    <small><strong>Nível Médio</strong></small>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -284,7 +291,7 @@
 
 {% block scripts %}
 <script>
-let levelChart, predictionChart;
+let levelChart, predictionChart, observedVsPredictionChart;
 let currentData = null;
 
 document.addEventListener('DOMContentLoaded', function() {
@@ -309,9 +316,9 @@ function loadDashboardData() {
             updateStatistics(data);
             createLevelChart(data);
             createPredictionChart(data);
+            createObservedVsPredictionChart(data);
             populateClustersTable(data);
             createRankingCards(data);
-            updateDetailedTable(data);
             updateLegend(data);
             generateAIRecommendations(data);
             generateOperationalInsights(data);
@@ -422,6 +429,194 @@ function createPredictionChart(data) {
     });
 }
 
+function createObservedVsPredictionChart(data) {
+    const ctx = document.getElementById('observedVsPredictionChart').getContext('2d');
+    
+    // Preparar dados para o gráfico
+    const chartData = [];
+    const backgroundColors = [];
+    const annotations = [];
+    
+    data.clusters.forEach((cluster, index) => {
+        cluster.instances.forEach(instance => {
+            chartData.push({
+                x: instance.hora,
+                observed: instance.media_movel_10,
+                prediction: cluster.baseline_prediction,
+                level: cluster.level,
+                action: cluster.action,
+                clusterId: cluster.cluster_id
+            });
+            
+            // Cores de fundo baseadas no nível
+            backgroundColors.push(cluster.level === 'alto' ? 'rgba(255, 107, 107, 0.1)' : 'rgba(254, 202, 87, 0.1)');
+        });
+    });
+    
+    // Ordenar por hora
+    chartData.sort((a, b) => a.x - b.x);
+    
+    // Criar anotações para ações recomendadas
+    const uniqueActions = [...new Set(chartData.map(item => item.action))];
+    uniqueActions.forEach((action, index) => {
+        const actionData = chartData.find(item => item.action === action);
+        if (actionData) {
+            annotations.push({
+                type: 'line',
+                mode: 'vertical',
+                scaleID: 'x',
+                value: actionData.x,
+                borderColor: actionData.level === 'alto' ? '#ff6b6b' : '#feca57',
+                borderWidth: 2,
+                borderDash: [5, 5],
+                label: {
+                    content: action,
+                    enabled: true,
+                    position: 'top'
+                }
+            });
+        }
+    });
+    
+    observedVsPredictionChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: chartData.map(item => `${item.x}:00`),
+            datasets: [
+                {
+                    label: 'Média Móvel (Observado)',
+                    data: chartData.map(item => item.observed),
+                    borderColor: '#3498db',
+                    backgroundColor: 'rgba(52, 152, 219, 0.1)',
+                    borderWidth: 3,
+                    tension: 0.4,
+                    fill: false,
+                    pointRadius: 6,
+                    pointHoverRadius: 8,
+                    pointBackgroundColor: chartData.map(item => item.level === 'alto' ? '#ff6b6b' : '#feca57'),
+                    pointBorderColor: chartData.map(item => item.level === 'alto' ? '#ff6b6b' : '#feca57'),
+                    yAxisID: 'y'
+                },
+                {
+                    label: 'Previsão Baseline',
+                    data: chartData.map(item => item.prediction),
+                    borderColor: '#e74c3c',
+                    backgroundColor: 'rgba(231, 76, 60, 0.1)',
+                    borderWidth: 3,
+                    tension: 0.4,
+                    fill: false,
+                    pointRadius: 6,
+                    pointHoverRadius: 8,
+                    pointBackgroundColor: chartData.map(item => item.level === 'alto' ? '#ff6b6b' : '#feca57'),
+                    pointBorderColor: chartData.map(item => item.level === 'alto' ? '#ff6b6b' : '#feca57'),
+                    yAxisID: 'y1'
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: {
+                mode: 'index',
+                intersect: false,
+            },
+            plugins: {
+                legend: {
+                    position: 'top',
+                    labels: {
+                        usePointStyle: true,
+                        padding: 20
+                    }
+                },
+                tooltip: {
+                    callbacks: {
+                        afterLabel: function(context) {
+                            const dataIndex = context.dataIndex;
+                            const item = chartData[dataIndex];
+                            return [
+                                `Cluster: ${item.clusterId}`,
+                                `Nível: ${item.level.charAt(0).toUpperCase() + item.level.slice(1)}`,
+                                `Ação: ${item.action}`
+                            ];
+                        }
+                    }
+                }
+            },
+            scales: {
+                x: {
+                    title: {
+                        display: true,
+                        text: 'Hora do Dia',
+                        font: {
+                            size: 14,
+                            weight: 'bold'
+                        }
+                    },
+                    grid: {
+                        display: true,
+                        color: 'rgba(0,0,0,0.1)'
+                    }
+                },
+                y: {
+                    type: 'linear',
+                    display: true,
+                    position: 'left',
+                    title: {
+                        display: true,
+                        text: 'Média Móvel (Observado)',
+                        font: {
+                            size: 14,
+                            weight: 'bold'
+                        },
+                        color: '#3498db'
+                    },
+                    ticks: {
+                        callback: function(value) {
+                            return formatNumber(value);
+                        },
+                        color: '#3498db'
+                    },
+                    grid: {
+                        display: true,
+                        color: 'rgba(52, 152, 219, 0.1)'
+                    }
+                },
+                y1: {
+                    type: 'linear',
+                    display: true,
+                    position: 'right',
+                    title: {
+                        display: true,
+                        text: 'Previsão Baseline',
+                        font: {
+                            size: 14,
+                            weight: 'bold'
+                        },
+                        color: '#e74c3c'
+                    },
+                    ticks: {
+                        callback: function(value) {
+                            return formatNumber(value);
+                        },
+                        color: '#e74c3c'
+                    },
+                    grid: {
+                        drawOnChartArea: false,
+                    },
+                }
+            },
+            elements: {
+                point: {
+                    hoverBackgroundColor: function(context) {
+                        const dataIndex = context.dataIndex;
+                        const item = chartData[dataIndex];
+                        return item.level === 'alto' ? '#ff6b6b' : '#feca57';
+                    }
+                }
+            }
+        }
+    });
+}
 
 function populateClustersTable(data) {
     const tbody = document.getElementById('clusters-table');
@@ -543,28 +738,6 @@ function createRankingCards(data) {
     });
 }
 
-function updateDetailedTable(data) {
-    const tbody = document.getElementById('detailed-table-body');
-    tbody.innerHTML = '';
-    
-    data.clusters.forEach(cluster => {
-        cluster.instances.forEach(instance => {
-            const row = document.createElement('tr');
-            row.innerHTML = `
-                <td><strong>${cluster.cluster_id}</strong></td>
-                <td>${instance.hora}:00</td>
-                <td>${instance.final_de_semana ? 'Sim' : 'Não'}</td>
-                <td>${formatNumber(instance.media_movel_10)}</td>
-                <td>${(instance.proporcao_rede * 100).toFixed(1)}%</td>
-                <td>${instance.pct_var_jogadores > 0 ? '+' : ''}${instance.pct_var_jogadores}%</td>
-                <td>${formatNumber(cluster.baseline_prediction)}</td>
-                <td><span class="level-badge level-${cluster.level}">${cluster.level.charAt(0).toUpperCase() + cluster.level.slice(1)}</span></td>
-                <td>${cluster.action}</td>
-            `;
-            tbody.appendChild(row);
-        });
-    });
-}
 
 function updateLegend(data) {
     const legendList = document.getElementById('legend-list');
