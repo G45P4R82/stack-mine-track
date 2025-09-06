@@ -1,0 +1,28 @@
+nohup: ignoring input
+ * Serving Flask app 'app'
+ * Debug mode: on
+[31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:8901
+ * Running on http://192.168.0.122:8901
+[33mPress CTRL+C to quit[0m
+ * Restarting with stat
+ * Debugger is active!
+ * Debugger PIN: 238-303-774
+192.168.0.76 - - [06/Sep/2025 00:13:17] "GET / HTTP/1.1" 200 -
+192.168.0.76 - - [06/Sep/2025 00:13:17] "GET /api/data HTTP/1.1" 200 -
+192.168.0.76 - - [06/Sep/2025 00:19:45] "GET / HTTP/1.1" 200 -
+192.168.0.76 - - [06/Sep/2025 00:19:45] "GET /api/data HTTP/1.1" 200 -
+192.168.0.76 - - [06/Sep/2025 00:20:40] "GET / HTTP/1.1" 200 -
+192.168.0.76 - - [06/Sep/2025 00:20:40] "GET /api/data HTTP/1.1" 200 -
+192.168.0.76 - - [06/Sep/2025 00:28:58] "GET / HTTP/1.1" 200 -
+192.168.0.76 - - [06/Sep/2025 00:28:58] "GET /api/data HTTP/1.1" 200 -
+192.168.0.76 - - [06/Sep/2025 11:25:55] "GET / HTTP/1.1" 200 -
+192.168.0.76 - - [06/Sep/2025 11:25:56] "GET /api/data HTTP/1.1" 200 -
+100.112.20.92 - - [06/Sep/2025 12:37:03] "GET / HTTP/1.1" 200 -
+100.112.20.92 - - [06/Sep/2025 12:37:04] "GET /api/data HTTP/1.1" 200 -
+100.112.20.92 - - [06/Sep/2025 12:37:04] "[33mGET /favicon.ico HTTP/1.1[0m" 404 -
+100.112.20.92 - - [06/Sep/2025 12:54:04] "GET / HTTP/1.1" 200 -
+100.112.20.92 - - [06/Sep/2025 12:54:05] "GET /api/data HTTP/1.1" 200 -
+100.112.20.92 - - [06/Sep/2025 13:28:53] "GET / HTTP/1.1" 200 -
+100.112.20.92 - - [06/Sep/2025 13:28:53] "GET /api/data HTTP/1.1" 200 -
