@@ -14,8 +14,8 @@ from datetime import datetime, timedelta
 
 def carregar_dados():
     """Carrega os CSVs de 02/04/2020 até 30/07/2020 (Java edition) e concatena."""
-    inicio = datetime(2025, 9, 1)
-    fim = datetime(2025, 9, 5)
+    inicio = datetime(2022, 9, 2)
+    fim = datetime(2022, 9, 10)
     dados = []
 
     dia = inicio
