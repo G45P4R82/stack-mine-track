@@ -7,13 +7,13 @@ def create_pipeline(**kwargs) -> Pipeline:
     return pipeline([
         node(
             func=carregar_dados,
-            inputs=None,
+            inputs="params:mine.edition",
             outputs="minecraft_servidores_raw",
             name="coleta_mine_node",
         ),
         node(
             func=carregar_dados_ultimas_4h,
-            inputs=None,
+            inputs="params:mine.edition",
             outputs="input_inference",
             name="coleta_mine_node_ultimas_4h",
         ),

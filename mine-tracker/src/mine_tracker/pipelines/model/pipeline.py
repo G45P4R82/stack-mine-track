@@ -1,37 +1,38 @@
 from kedro.pipeline import Node, Pipeline
 from mine_tracker.pipelines.model.nodes import (
-    load_data, preprocess_data, criar_pipelines, treinar_modelos, avaliar_modelos
+    criar_pipelines, treinar_modelos_incremental, avaliar_modelos
 )
 
 def create_pipeline(**kwargs) -> Pipeline:
     return Pipeline([
         Node(
             func=criar_pipelines,
-            inputs=None,
+            inputs=[
+                "params:model.features",
+                "params:model.training.n_estimators", 
+                "params:model.training.n_jobs"
+            ],
             outputs="modelos",
             name="criar_pipelines_node",
         ),
         Node(
-            func=load_data,
-            inputs="minecraft_servidores_features",
-            outputs="model_data",
-            name="load_data_node",
-        ),
-        Node(
-            func=preprocess_data,
-            inputs="model_data",
-            outputs=["X", "y", "n_drop_y"],
-            name="preprocess_data_node",
-        ),
-        Node(  # <- AGORA PRODUZ "modelos_trained"
-            func=treinar_modelos,
-            inputs=["modelos", "X", "y"],
-            outputs="modelos_trained",
+            func=treinar_modelos_incremental,
+            inputs=[
+                "modelos", 
+                "params:model.features", 
+                "params:model.target",
+                "params:model.training.n_estimators"
+            ],
+            outputs="modelos_treinados",
             name="treinar_modelos_node",
         ),
-        Node(  # <- AVALIA USA "modelos_trained"
+        Node(
             func=avaliar_modelos,
-            inputs=["modelos_trained", "X", "y", "n_drop_y"],
+            inputs=[
+                "modelos_treinados", 
+                "params:model.features", 
+                "params:model.target"
+            ],
             outputs=["best_model", "metricas_dict", "X_test"],
             name="avaliar_modelos_node",
         ),

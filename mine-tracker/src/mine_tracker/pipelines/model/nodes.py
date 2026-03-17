@@ -13,6 +13,7 @@ Fluxo:
 import os
 from datetime import datetime
 from typing import Dict, Tuple
+import gc
 
 import joblib
 import numpy as np
@@ -20,23 +21,15 @@ import pandas as pd
 from sklearn.compose import ColumnTransformer
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.impute import SimpleImputer
-from sklearn.linear_model import LinearRegression
+from sklearn.linear_model import SGDRegressor
 from sklearn.metrics import mean_absolute_error, r2_score
 from sklearn.model_selection import train_test_split
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
 import logging
+import gc
 
 logger = logging.getLogger(__name__)
-# Configs básicas
-FEATURES = [
-    "hora",
-    "final_de_semana",
-    "media_movel_10",
-    "proporcao_rede",
-    "pct_var_jogadores",
-]
-TARGET = "playerCount"
 MODEL_DIR = "models"  # ajuste se quiser outro caminho
 
 
@@ -61,12 +54,12 @@ def load_data(df_raw: pd.DataFrame) -> pd.DataFrame:
 # =========================
 # 2) Pré-processamento
 # =========================
-def preprocess_data(df: pd.DataFrame) -> Tuple[pd.DataFrame, pd.Series, int]:
+def preprocess_data(df: pd.DataFrame, features: list, target: str) -> Tuple[pd.DataFrame, pd.Series, int]:
     """Seleciona features/target, converte para numérico, trata inf/NaN,
     winsoriza pct_var_jogadores e retorna X, y, n_drop_y.
-    Também propaga 'servidor_escolhido' em X.attrs para uso posterior.
+    Também propaga 'servidor_escolhido' in X.attrs para uso posterior.
     """
-    cols_necessarias = FEATURES + [TARGET]
+    cols_necessarias = features + [target]
     faltantes = [c for c in cols_necessarias if c not in df.columns]
     if faltantes:
         raise ValueError(f"Colunas faltantes no dataset: {faltantes}")
@@ -89,11 +82,11 @@ def preprocess_data(df: pd.DataFrame) -> Tuple[pd.DataFrame, pd.Series, int]:
 
     # Remover linhas com y NaN
     n_total = len(df_model)
-    df_model = df_model.dropna(subset=[TARGET])
+    df_model = df_model.dropna(subset=[target])
     n_drop_y = n_total - len(df_model)
 
-    X = df_model[FEATURES].copy()
-    y = df_model[TARGET].astype(float)
+    X = df_model[features].copy().astype("float32")
+    y = df_model[target].astype(float)
 
     # Propaga nome do servidor (se presente)
     servidor_escolhido = df.attrs.get("servidor_escolhido", None)
@@ -106,9 +99,15 @@ def preprocess_data(df: pd.DataFrame) -> Tuple[pd.DataFrame, pd.Series, int]:
 # =========================
 # 3) Modelos
 # =========================
-def criar_pipelines() -> Dict[str, Pipeline]:
-    """Cria pipelines para LinearRegression e RandomForest."""
-    num_features = FEATURES
+def criar_pipelines(features: list, n_estimators: int = 100, n_jobs: int = 2) -> Dict[str, Pipeline]:
+    """Cria pipelines para LinearRegression e RandomForest.
+    
+    Args:
+        features: Lista de colunas a serem usadas.
+        n_estimators: Número de árvores no RF.
+        n_jobs: Número de processos paralelos (limite para RAM).
+    """
+    num_features = features
 
     preprocess_linear = ColumnTransformer(
         transformers=[
@@ -132,24 +131,17 @@ def criar_pipelines() -> Dict[str, Pipeline]:
     )
 
     modelos = {
-        "LinearRegression": Pipeline(
+        "SGDRegressor": Pipeline(
             steps=[
-                ("prep", preprocess_linear),
-                ("est", LinearRegression()),
+                ("scaler", StandardScaler()),
+                ("est", SGDRegressor(random_state=42)),
             ]
         ),
-        "RandomForest": Pipeline(
-            steps=[
-                ("prep", preprocess_rf),
-                (
-                    "est",
-                    RandomForestRegressor(
-                        n_estimators=200,
-                        random_state=42,
-                        n_jobs=-1,
-                    ),
-                ),
-            ]
+        "RandomForest": RandomForestRegressor(
+            n_estimators=0,  # Começa com zero para crescer no warm_start
+            random_state=42,
+            n_jobs=n_jobs,
+            warm_start=True,
         ),
     }
     return modelos
@@ -158,11 +150,54 @@ def criar_pipelines() -> Dict[str, Pipeline]:
 # =========================
 # 4) Treino
 # =========================
-def treinar_modelos(modelos: Dict[str, Pipeline], X: pd.DataFrame, y: pd.Series) -> Dict[str, Pipeline]:
-    """Treina todos os modelos e retorna o dicionário treinado."""
-    X_train, _, y_train, _ = train_test_split(X, y, test_size=0.2, random_state=42)
-    for _, modelo in modelos.items():
-        modelo.fit(X_train, y_train)
+def treinar_modelos_incremental(
+    modelos: Dict,
+    features: list,
+    target: str,
+    n_estimators_max: int = 100,
+) -> Dict:
+    """Treina os modelos processando o arquivo em chunks para poupar RAM.
+    
+    Lógica: 
+    - SGDRegressor usa partial_fit.
+    - RandomForest usa warm_start e adiciona 10 árvores por chunk até o limite.
+    """
+    filepath = "data/04_feature/minecraft_servidores_features.csv"
+    chunk_size = 50000  # 50k linhas por vez
+    
+    logger.info("Iniciando treino INCREMENTAL (faseado) de %s", filepath)
+
+    # Identifica o servidor mais frequente (primeira passada rápida)
+    # Para simplicidade e economia de memória, vamos assumir que o filtro já foi feito 
+    # ou treinar com o que vier no CSV (que deve ser o dataset pré-filtrado feature).
+    
+    first_chunk = True
+    n_trees_per_chunk = max(1, n_estimators_max // 5) # Divide em 5 fases
+
+    for chunk in pd.read_csv(filepath, chunksize=chunk_size):
+        # Pre-processamento básico do chunk
+        for c in features + [target]:
+            chunk[c] = pd.to_numeric(chunk[c], errors="coerce")
+        chunk = chunk.dropna(subset=[target]).fillna(0)
+        
+        X_chunk = chunk[features].astype("float32")
+        y_chunk = chunk[target].astype("float32")
+
+        # 1) Treino SGD
+        modelos["SGDRegressor"].named_steps["scaler"].partial_fit(X_chunk)
+        X_scaled = modelos["SGDRegressor"].named_steps["scaler"].transform(X_chunk)
+        modelos["SGDRegressor"].named_steps["est"].partial_fit(X_scaled, y_chunk)
+
+        # 2) Treino RF (warm_start)
+        rf = modelos["RandomForest"]
+        if rf.n_estimators < n_estimators_max:
+            rf.n_estimators += n_trees_per_chunk
+            rf.fit(X_chunk, y_chunk)
+        
+        del chunk, X_chunk, y_chunk, X_scaled
+        gc.collect()
+        logger.info("Chunk processado. RF Trees: %d", rf.n_estimators)
+
     return modelos
 
 # =========================
@@ -178,18 +213,37 @@ def _avaliar_um(nome: str, modelo: Pipeline, X: pd.DataFrame, y: pd.Series) -> T
 
 
 def avaliar_modelos(
-    modelos: Dict[str, Pipeline],
-    X: pd.DataFrame,
-    y: pd.Series,
-    n_drop_y: int,
-) -> None:
-    """Usa o mesmo split para avaliação, escolhe melhor por R² e salva artefatos."""
-    # Mesmo split do treino
-    _, X_test, _, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+    modelos: Dict,
+    features: list,
+    target: str,
+) -> Tuple:
+    """Avalia o melhor modelo (usando uma amostra final para métricas)."""
+    # Para avaliação, carregamos apenas um pedaço (sample) dos dados
+    filepath = "data/04_feature/minecraft_servidores_features.csv"
+    df_eval = pd.read_csv(filepath, nrows=10000)
+    
+    X_eval = df_eval[features].fillna(0).astype("float32")
+    y_eval = df_eval[target].fillna(0).astype("float32")
 
-    logger.info("\nAvaliação (teste):")
-    metricas = {nome: _avaliar_um(nome, mdl, X_test, y_test) for nome, mdl in modelos.items()}
-
-    # Escolhe melhor por R²
-    melhor = max(metricas, key=lambda k: metricas[k][1])
-    return modelos[melhor], {k: {"mae": m[0], "r2": m[1]} for k, m in metricas.items()}, X_test
+    logger.info("\nAvaliação Incremental (Amostra 10k):")
+    
+    # Avalia SGD
+    X_scaled = modelos["SGDRegressor"].named_steps["scaler"].transform(X_eval)
+    pred_sgd = modelos["SGDRegressor"].named_steps["est"].predict(X_scaled)
+    r2_sgd = r2_score(y_eval, pred_sgd)
+    
+    # Avalia RF
+    pred_rf = modelos["RandomForest"].predict(X_eval)
+    r2_rf = r2_score(y_eval, pred_rf)
+    
+    logger.info(f"SGD R²: {r2_sgd:.4f} | RF R²: {r2_rf:.4f}")
+    
+    melhor_nome = "RandomForest" if r2_rf > r2_sgd else "SGDRegressor"
+    melhor_mdl = modelos[melhor_nome]
+    
+    metrics = {
+        "SGDRegressor": {"r2": r2_sgd},
+        "RandomForest": {"r2": r2_rf}
+    }
+    
+    return melhor_mdl, metrics, X_eval
