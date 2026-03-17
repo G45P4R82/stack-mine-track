@@ -1,83 +1,123 @@
 """
-This is a boilerplate pipeline 'mine'
-generated using Kedro 1.0.0
+Pipeline 'mine' — Coleta de dados e Feature Engineering.
 """
-import pandas as pd
 import logging
-logger = logging.getLogger(__name__)
-import pandas as pd
 import random
-from datetime import datetime
-import pytz
 from datetime import datetime, timedelta
+from io import StringIO
+from pathlib import Path
+import shutil
+
+import pandas as pd
+import requests
+import pytz
+
+logger = logging.getLogger(__name__)
 
 
-def carregar_dados():
-    """Carrega os CSVs de 02/04/2020 até 30/07/2020 (Java edition) e concatena."""
-    inicio = datetime(2022, 9, 2)
-    fim = datetime(2022, 9, 10)
-    dados = []
+def carregar_dados(edition: str = "Java") -> pd.DataFrame:
+    """Baixa CSVs do mês anterior completo do minetrack.me salvando em disco.
 
+    Args:
+        edition: Edição do Minecraft ("Java" ou "Bedrock").
+
+    Returns:
+        DataFrame consolidado.
+    """
+    hoje = datetime.today()
+    primeiro_dia_mes_atual = hoje.replace(day=1)
+    ultimo_dia_mes_anterior = primeiro_dia_mes_atual - timedelta(days=1)
+    primeiro_dia_mes_anterior = ultimo_dia_mes_anterior.replace(day=1)
+
+    inicio = primeiro_dia_mes_anterior
+    fim = ultimo_dia_mes_anterior
+
+    # Criar diretório temporário para os CSVs diários
+    temp_dir = Path("data/01_raw/temp_collect")
+    temp_dir.mkdir(parents=True, exist_ok=True)
+
+    logger.info(
+        "Coletando dados de %s — período: %s até %s (Salvando em disk)",
+        edition,
+        inicio.strftime("%d/%m/%Y"),
+        fim.strftime("%d/%m/%Y"),
+    )
+
+    temp_files = []
     dia = inicio
     while dia <= fim:
-        url = f"https://dl.minetrack.me/Java/{dia.day}-{dia.month}-{dia.year}.csv"
+        url = f"https://dl.minetrack.me/{edition}/{dia.day}-{dia.month}-{dia.year}.csv"
         try:
-            df = pd.read_csv(url)
-            df['timestamp'] = pd.to_datetime(df['timestamp'], unit='ms', errors='coerce', utc=True)
-            dados.append(df)
-            print(f"✅ carregado {url}")
+            response = requests.get(url, timeout=30)
+            response.raise_for_status()
+
+            temp_path = temp_dir / f"{dia.strftime('%Y-%m-%d')}.csv"
+            with open(temp_path, "w", encoding="utf-8") as f:
+                f.write(response.text)
+
+            temp_files.append(temp_path)
+            logger.info("✅ Baixado e salvo em disco: %s", url)
         except Exception as e:
-            print(f"⚠️ erro em {url}: {e}")
+            logger.warning("⚠️ Erro ao baixar %s: %s", url, e)
         dia += timedelta(days=1)
 
-    if dados:
-        return pd.concat(dados, ignore_index=True)
-    else:
+    if not temp_files:
+        logger.error("Nenhum dado foi coletado.")
         return pd.DataFrame()
 
+    # Junta tudo (Lendo em disco para evitar estourar memória)
+    logger.info("Iniciando merge dos %d arquivos coletados...", len(temp_files))
+    
+    # Implementação de merge linear simples para retornar como DataFrame 
+    # (O Kedro precisa do objeto final em memória para o CSVDataset salvar)
+    dfs = []
+    for path in temp_files:
+        dfs.append(pd.read_csv(path))
+    
+    final_df = pd.concat(dfs, ignore_index=True)
+    
+    # Conversão de timestamp pós-concatenação para economizar tempo
+    if not final_df.empty:
+        final_df["timestamp"] = pd.to_datetime(
+            final_df["timestamp"], unit="ms", errors="coerce", utc=True
+        )
 
-def carregar_dados_ultimas_4h(n_rows: int = 250) -> pd.DataFrame:
+    # Limpeza
+    shutil.rmtree(temp_dir, ignore_errors=True)
+    logger.info("Consolidação concluída. Memória liberada.")
+
+    return final_df
+
+
+def carregar_dados_ultimas_4h(edition: str = "Java") -> pd.DataFrame:
     """
-    Simula a coleta de dados coerente com clusters conhecidos,
-    usando horário do Brasil e variação de ±1h.
-    Gera múltiplas linhas por cluster para criar base de inferência.
+    Baixa o CSV de ontem do minetrack.me para ser usado na inferência.
     """
-    tz = pytz.timezone("America/Sao_Paulo")
-    now = datetime.now(tz)
+    ontem = datetime.today() - timedelta(days=1)
+    url = f"https://dl.minetrack.me/{edition}/{ontem.day}-{ontem.month}-{ontem.year}.csv"
+    
+    logger.info("Coletando dados de inferência (ontem): %s", url)
+    
+    try:
+        response = requests.get(url, timeout=30)
+        response.raise_for_status()
+        
+        df = pd.read_csv(StringIO(response.text))
+        df["timestamp"] = pd.to_datetime(
+            df["timestamp"], unit="ms", errors="coerce", utc=True
+        )
+        
+        # Para manter compatibilidade com o pipeline de inference/report, 
+        # gera uma coluna 'cluster' baseada no código do IP caso não exista.
+        if "cluster" not in df.columns:
+            df["cluster"] = df["ip"].astype("category").cat.codes
+            
+        logger.info("✅ Dados de inferência carregados: %d registros.", len(df))
+        return df
+    except Exception as e:
+        logger.error("❌ Erro ao coletar dados de inferência: %s", e)
+        return pd.DataFrame()
 
-    # clusters e horários base
-    clusters_config = {
-        0: {"hora_base": 10, "media_range": (58000, 62000)},
-        1: {"hora_base": 18, "media_range": (68000, 72000)},
-        2: {"hora_base": 21, "media_range": (87000, 91000)},
-        3: {"hora_base": 3,  "media_range": (38000, 42000)},
-    }
-
-    rows = []
-    cluster_ids = list(clusters_config.keys())
-
-    for _ in range(n_rows):
-        cluster_id = random.choice(cluster_ids)
-        cfg = clusters_config[cluster_id]
-
-        hora = cfg["hora_base"] + random.choice([-1, 0, 1])
-        hora = max(0, min(23, hora))  # garante 0–23
-        final_de_semana = 1 if now.weekday() >= 5 else 0
-
-        media_movel_10 = random.randint(*cfg["media_range"])
-        proporcao_rede = round(random.uniform(0.25, 0.40), 2)
-        pct_var_jogadores = round(random.uniform(-1.0, 2.0), 1)
-
-        rows.append({
-            "hora": hora,
-            "final_de_semana": final_de_semana,
-            "media_movel_10": media_movel_10,
-            "proporcao_rede": proporcao_rede,
-            "pct_var_jogadores": pct_var_jogadores,
-            "cluster": cluster_id
-        })
-
-    return pd.DataFrame(rows)
 
 def gerar_features(df):
     """Cria todas as features para análise."""
@@ -86,7 +126,7 @@ def gerar_features(df):
     df['timestamp'] = pd.to_datetime(df['timestamp'], errors='coerce')
 
     # Features temporais
-    logger
+    logger.info("Criando features temporais.")
     df['data'] = df['timestamp'].dt.date
     df['hora'] = df['timestamp'].dt.hour
     df['minuto'] = df['timestamp'].dt.minute
@@ -132,5 +172,3 @@ def gerar_features(df):
     df['servidor_hora'] = df['ip'] + "_" + df['hora'].astype(str)
 
     return df
-
-
