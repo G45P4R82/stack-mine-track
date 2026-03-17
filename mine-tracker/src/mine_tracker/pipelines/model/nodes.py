@@ -175,13 +175,21 @@ def treinar_modelos_incremental(
     n_trees_per_chunk = max(1, n_estimators_max // 5) # Divide em 5 fases
 
     for chunk in pd.read_csv(filepath, chunksize=chunk_size):
-        # Pre-processamento básico do chunk
+        # Pre-processamento robusto do chunk
         for c in features + [target]:
             chunk[c] = pd.to_numeric(chunk[c], errors="coerce")
+        
+        # Trata infinitos (comum em divisões por zero de porcentagem)
+        chunk = chunk.replace([np.inf, -np.inf], np.nan)
         chunk = chunk.dropna(subset=[target]).fillna(0)
         
         X_chunk = chunk[features].astype("float32")
         y_chunk = chunk[target].astype("float32")
+
+        # Garante que não há valores absurdamente grandes para o float32 (Scikit-learn Overflow)
+        # Clipamos em um range seguro mas amplo
+        X_chunk = np.clip(X_chunk, -1e30, 1e30)
+        y_chunk = np.clip(y_chunk, -1e30, 1e30)
 
         # 1) Treino SGD
         modelos["SGDRegressor"].named_steps["scaler"].partial_fit(X_chunk)
