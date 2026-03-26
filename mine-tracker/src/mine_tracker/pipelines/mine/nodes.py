@@ -15,22 +15,19 @@ import pytz
 logger = logging.getLogger(__name__)
 
 
-def carregar_dados(edition: str = "Java") -> pd.DataFrame:
-    """Baixa CSVs do mês anterior completo do minetrack.me salvando em disco.
+def carregar_dados(edition: str = "Java", days_history: int = 60) -> pd.DataFrame:
+    """Baixa CSVs do período especificado do minetrack.me salvando em disco.
 
     Args:
         edition: Edição do Minecraft ("Java" ou "Bedrock").
+        days_history: Quantidade de dias para buscar dados para o passado a partir de hoje.
 
     Returns:
         DataFrame consolidado.
     """
     hoje = datetime.today()
-    primeiro_dia_mes_atual = hoje.replace(day=1)
-    ultimo_dia_mes_anterior = primeiro_dia_mes_atual - timedelta(days=1)
-    primeiro_dia_mes_anterior = ultimo_dia_mes_anterior.replace(day=1)
-
-    inicio = primeiro_dia_mes_anterior
-    fim = ultimo_dia_mes_anterior
+    fim = hoje - timedelta(days=1)  # Até ontem (pois hoje pode estar incompleto)
+    inicio = hoje - timedelta(days=days_history)
 
     # Criar diretório temporário para os CSVs diários
     temp_dir = Path("data/01_raw/temp_collect")
@@ -172,3 +169,4 @@ def gerar_features(df):
     df['servidor_hora'] = df['ip'] + "_" + df['hora'].astype(str)
 
     return df
+    

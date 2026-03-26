@@ -204,7 +204,6 @@ def treinar_modelos_incremental(
         
         del chunk, X_chunk, y_chunk, X_scaled
         gc.collect()
-        logger.info("Chunk processado. RF Trees: %d", rf.n_estimators)
 
     return modelos
 

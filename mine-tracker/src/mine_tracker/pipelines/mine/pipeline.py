@@ -7,7 +7,7 @@ def create_pipeline(**kwargs) -> Pipeline:
     return pipeline([
         node(
             func=carregar_dados,
-            inputs="params:mine.edition",
+            inputs=["params:mine.edition", "params:mine.days_history"],
             outputs="minecraft_servidores_raw",
             name="coleta_mine_node",
         ),

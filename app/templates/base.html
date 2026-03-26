@@ -17,6 +17,9 @@
     <!-- Anime.js -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js"></script>
     
+    <!-- HTMX -->
+    <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+    
     <style>
         :root {
             --primary-color: #2c3e50;
@@ -263,7 +266,7 @@
         }
     </style>
 </head>
-<body>
+<body hx-boost="true">
     <!-- Navigation -->
     <nav class="navbar navbar-expand-lg navbar-dark">
         <div class="container">
