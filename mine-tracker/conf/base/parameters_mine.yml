@@ -1,4 +1,4 @@
 # conf/base/parameters_mine.yml
 mine:
   edition: "Java"  # "Java" ou "Bedrock"
-  days_history: 10 # Quantos dias para o passado buscar dados a partir de hoje
+  days_history: 7 # Quantos dias para o passado buscar dados a partir de hoje

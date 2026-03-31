@@ -1,12 +1,16 @@
-# conf/base/parameters_model.yml
 model:
   features:
-    - hora
+    - hora_sin
+    - hora_cos
+    - dia_sem_sin
+    - dia_sem_cos
     - final_de_semana
-    - media_movel_10
+    - playerCount_lag_24h
+    - playerCount_lag_1h
+    - playerCount_z
+    - lag_24h_z
     - proporcao_rede
-    - pct_var_jogadores
-  target: playerCount
+  target: target_24h
   test_size: 0.2
   random_state: 42
   winsorize_feature: pct_var_jogadores
