@@ -161,3 +161,4 @@ venv.bak/
 
 # mlflow local runs
 mlruns/*
+mobile/report_inference.json
