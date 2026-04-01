@@ -39,7 +39,7 @@ def load_metricas() -> dict:
 
 def build_summary() -> dict:
     """Pré-processa report_inference.json e retorna resumo compacto."""
-    path = os.path.join(DATA_DIR, 'report_inference.json')
+    path = os.path.join(DATA_DIR, 'report.json')
     try:
         with open(path, 'r', encoding='utf-8') as f:
             raw = json.loads(f.read().replace(': NaN', ': null'))
