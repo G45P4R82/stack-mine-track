@@ -1,16 +1,16 @@
 """
 Mine Tracker — Flet Mobile Dashboard
-Consome os dados de mine-tracker/data/08_reporting/*.json
+Consome os dados via raw do GitHub.
 """
 
 import flet as ft
 import json
-import os
+import urllib.request
 from collections import defaultdict
 
-# ── Paths ────────────────────────────────────────────────────────────────────
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-DATA_DIR = BASE_DIR
+# ── URLs dos dados (GitHub raw) ──────────────────────────────────────────────
+REPORT_URL  = "https://raw.githubusercontent.com/G45P4R82/stack-mine-track/refs/heads/main/mobile/report.json"
+METRICAS_URL = "https://raw.githubusercontent.com/G45P4R82/stack-mine-track/refs/heads/main/mobile/metricas.json"
 
 # ── Cores por nível ──────────────────────────────────────────────────────────
 LEVEL_COLORS = {
@@ -28,22 +28,25 @@ LEVEL_ICONS = {
 
 
 # ── Data loaders ─────────────────────────────────────────────────────────────
-def load_metricas() -> dict:
-    path = os.path.join(DATA_DIR, 'metricas.json')
+def _fetch_json(url: str) -> dict | list | None:
+    """Baixa JSON de uma URL e retorna o objeto parseado."""
     try:
-        with open(path, 'r', encoding='utf-8') as f:
-            return json.load(f)
+        with urllib.request.urlopen(url, timeout=15) as resp:
+            text = resp.read().decode('utf-8')
+            text = text.replace(': NaN', ': null')
+            return json.loads(text)
     except Exception:
-        return {}
+        return None
+
+
+def load_metricas() -> dict:
+    return _fetch_json(METRICAS_URL) or {}
 
 
 def build_summary() -> dict:
-    """Pré-processa report_inference.json e retorna resumo compacto."""
-    path = os.path.join(DATA_DIR, 'report.json')
-    try:
-        with open(path, 'r', encoding='utf-8') as f:
-            raw = json.loads(f.read().replace(': NaN', ': null'))
-    except Exception:
+    """Pré-processa report.json e retorna resumo compacto."""
+    raw = _fetch_json(REPORT_URL)
+    if not raw:
         return {}
 
     summary_clusters = []
